@@ -174,6 +174,7 @@ el.reloadBtn.onclick = async () => {
   } catch {}
 })();
 // Running as the Chrome extension: suggest turning on file access so .md files open straight in Chrome.
+if (window.chrome?.runtime?.id) document.body.classList.add('is-ext');
 if (window.chrome?.extension?.isAllowedFileSchemeAccess) {
   chrome.extension.isAllowedFileSchemeAccess((ok) => { if (!ok) $('#fileTip').classList.remove('hidden'); });
   $('#fileTipBtn').onclick = () => chrome.tabs.create({ url: 'chrome://extensions/?id=' + chrome.runtime.id });

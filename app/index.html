@@ -3,15 +3,56 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Markdown Folder Viewer</title>
+<title>Markdown Viewer Online – Open .md Files and Folders Free</title>
+<meta name="description" content="Free online Markdown viewer. Open an .md file, several files or a whole folder and read them formatted, with working links, search, Mermaid diagrams and PDF export. Nothing is uploaded.">
+<link rel="canonical" href="https://markdown-viewer-online.vercel.app/">
+<meta name="theme-color" content="#0969da">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Markdown Viewer Online">
+<meta property="og:title" content="Markdown Viewer Online – open .md files and folders">
+<meta property="og:description" content="Open an .md file or a whole folder of Markdown docs and read it like a website. Search, diagrams, PDF. Free, and nothing is uploaded.">
+<meta property="og:url" content="https://markdown-viewer-online.vercel.app/">
+<meta property="og:image" content="https://markdown-viewer-online.vercel.app/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="icons/32.png">
+<link rel="apple-touch-icon" href="icons/128.png">
 <link rel="stylesheet" href="viewer.css">
 <link rel="stylesheet" href="lib/hljs-themes.css">
-<script src="lib/marked.min.js"></script>
-<script src="lib/purify.min.js"></script>
-<script src="lib/highlight.min.js"></script>
-<script src="lib/mermaid.min.js"></script>
-<script src="core.js"></script>
+<script defer src="lib/marked.min.js"></script>
+<script defer src="lib/purify.min.js"></script>
+<script defer src="lib/highlight.min.js"></script>
+<script defer src="core.js"></script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebApplication",
+      "name": "Markdown Viewer Online",
+      "alternateName": ["Markdown Folder Viewer", "MD File Viewer"],
+      "url": "https://markdown-viewer-online.vercel.app/",
+      "description": "Free online Markdown viewer for .md files and whole folders, with working links, search, Mermaid diagrams and PDF export. Files are read in the browser and never uploaded.",
+      "applicationCategory": "UtilitiesApplication",
+      "operatingSystem": "Any",
+      "browserRequirements": "Requires a modern web browser",
+      "isAccessibleForFree": true,
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+      "featureList": ["Open single .md files, many files or whole folders", "Links between files", "Search across all files", "Mermaid diagrams and code highlighting", "Export to PDF", "Dark mode"]
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        { "@type": "Question", "name": "How do I open an .md file?", "acceptedAnswer": { "@type": "Answer", "text": "Open this page, then drag the .md file onto it or click Open files. It shows formatted straight away. To read a whole folder of Markdown files, click Open folder." } },
+        { "@type": "Question", "name": "Are my files uploaded?", "acceptedAnswer": { "@type": "Answer", "text": "No. Files are read inside your browser on your own computer. Nothing is sent to a server." } },
+        { "@type": "Question", "name": "Can I convert Markdown to PDF?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Click PDF to save the page you are reading, or the whole folder as one PDF with a contents page." } },
+        { "@type": "Question", "name": "Is it free?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. It is free, with no account and no limits." } }
+      ]
+    }
+  ]
+}
+</script>
 </head>
 <body>
 <header>
@@ -20,7 +61,7 @@
   </button>
   <div class="brand">
     <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor"><path d="M14.85 3c.63 0 1.15.52 1.14 1.15v7.7c0 .63-.51 1.15-1.15 1.15H1.15C.52 13 0 12.48 0 11.84V4.15C0 3.52.52 3 1.15 3ZM9 11V5H7L5.5 7 4 5H2v6h2V8l1.5 1.92L7 8v3Zm2.99.5L14.5 8H13V5h-2v3H9.5Z"/></svg>
-    <span class="hide-sm">MD Viewer</span>
+    <span class="hide-sm">Markdown Viewer</span>
   </div>
   <span id="rootName" class="when-loaded"></span>
   <span class="spacer"></span>
@@ -48,8 +89,8 @@
 <section id="welcome">
   <div class="drop-card">
     <svg width="44" height="44" viewBox="0 0 16 16" fill="var(--accent)"><path d="M1.75 1A1.75 1.75 0 0 0 0 2.75v10.5C0 14.216.784 15 1.75 15h12.5A1.75 1.75 0 0 0 16 13.25v-8.5A1.75 1.75 0 0 0 14.25 3H7.5a.25.25 0 0 1-.2-.1l-.9-1.2C6.07 1.26 5.55 1 5 1H1.75Z"/></svg>
-    <h1>Read a folder of Markdown docs</h1>
-    <p>Drop a folder here, or pick one. Plans, specs, requirements, notes: every <code>.md</code> file shows as a page, with working links between them.</p>
+    <h1>Markdown viewer for files and folders</h1>
+    <p>Drop an <code>.md</code> file or a whole folder here, or pick one. Plans, specs, notes, docs: every file shows formatted, with working links between them.</p>
     <div class="actions">
       <button class="btn primary" id="openFolderBtn">Open folder</button>
       <button class="btn" id="openFilesBtn">Open files</button>
@@ -57,6 +98,38 @@
     <button class="btn hidden" id="reopenBtn"></button>
     <p class="fine">Your files stay on your computer. Nothing is uploaded.</p>
     <p id="fileTip" class="hidden">To open <code>.md</code> files straight from your computer in Chrome, turn on “Allow access to file URLs”.<button class="btn" id="fileTipBtn">Open settings</button></p>
+  </div>
+
+  <div class="about">
+    <h2>Open and read Markdown files online</h2>
+    <p>Markdown (<code>.md</code>) files are plain text. Opened in a text editor or a browser tab, they show raw symbols:
+      <code>#</code>, <code>**</code>, <code>|</code>. This free viewer shows them the way GitHub does, and lets you move
+      around a whole folder of them like a small website.</p>
+    <div class="features">
+      <div><h3>Files or whole folders</h3><p>One file, several files, or a folder with sub-folders. README and index files open first.</p></div>
+      <div><h3>Links that work</h3><p>Links between files, <code>../</code> paths, <code>#headings</code> and Obsidian <code>[[wiki links]]</code>.</p></div>
+      <div><h3>Search everything</h3><p>Search across every file at once. Matches are highlighted on the page.</p></div>
+      <div><h3>Diagrams and code</h3><p>Tables, task lists, callouts, images, code highlighting and Mermaid diagrams.</p></div>
+      <div><h3>Markdown to PDF</h3><p>Save one page, or the whole folder as one PDF with a contents page.</p></div>
+      <div><h3>Private</h3><p>Files are read in your browser. Nothing is uploaded, and there is no account.</p></div>
+    </div>
+
+    <h2>How to open an .md file</h2>
+    <ol>
+      <li>Drag the <code>.md</code> file (or a folder) onto this page. Or click <b>Open files</b> or <b>Open folder</b>.</li>
+      <li>It shows formatted at once. Pick other files from the list on the left.</li>
+      <li>Click <b>PDF</b> to save it as a PDF, or <b>/</b> to search.</li>
+    </ol>
+
+    <h2>Questions</h2>
+    <details><summary>What is an .md file?</summary><p>A Markdown file: plain text with simple marks for headings, lists, links and tables. README files, notes apps like Obsidian, and many project plans and docs use it.</p></details>
+    <details><summary>Are my files uploaded?</summary><p>No. Your browser reads them on your own computer. Nothing is sent anywhere, so it is safe for private documents.</p></details>
+    <details><summary>Which Markdown does it support?</summary><p>GitHub-style Markdown: tables, task lists, fenced code with highlighting, <code>&gt; [!NOTE]</code> callouts, front matter, images, Mermaid diagrams and <code>[[wiki links]]</code>. Also <code>.markdown</code>, <code>.mdx</code> and <code>.txt</code> files.</p></details>
+    <details><summary>Can I convert Markdown to PDF?</summary><p>Yes. Click <b>PDF</b>, then choose “Save as PDF” in the print window. Links between documents still work inside the PDF.</p></details>
+    <details><summary>Does it work on a phone?</summary><p>Yes. Tap <b>Open files</b> to pick <code>.md</code> files. Opening whole folders works best on a computer.</p></details>
+    <details><summary>Is there a Chrome extension?</summary><p>Yes. The extension also shows <code>.md</code> files you open in Chrome straight from your computer. The source is on <a href="https://github.com/Thomasjoseph2/md_reader" rel="noopener">GitHub</a>.</p></details>
+
+    <p class="foot">Free and open source · <a href="https://github.com/Thomasjoseph2/md_reader" rel="noopener">GitHub</a> · <a href="https://github.com/Thomasjoseph2/md_reader/blob/main/PRIVACY.md" rel="noopener">Privacy</a></p>
   </div>
 </section>
 
@@ -90,6 +163,6 @@
 <input type="file" id="dirInput" webkitdirectory directory multiple hidden>
 <input type="file" id="fileInput" multiple accept=".md,.markdown,.mdx,.txt,image/*" hidden>
 
-<script src="viewer.js"></script>
+<script defer src="viewer.js"></script>
 </body>
 </html>

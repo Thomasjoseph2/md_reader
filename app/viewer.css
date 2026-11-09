@@ -35,7 +35,23 @@ body:not(.loaded) .when-loaded { display: none !important; }
 .hidden { display: none !important; }
 
 /* Welcome */
-#welcome { min-height: calc(100vh - var(--header-h)); display: grid; place-items: center; padding: 24px 16px; }
+#welcome { padding: 48px 16px 64px; }
+.drop-card { margin: 0 auto; }
+.about { max-width: 820px; margin: 56px auto 0; }
+.about h2 { font-size: 22px; margin: 40px 0 10px; }
+.about h3 { font-size: 15px; margin: 0 0 4px; }
+.about p, .about li { color: var(--muted); }
+.about code { font-size: 85%; padding: .1em .35em; background: var(--code-bg); border: 1px solid var(--border); border-radius: 5px; }
+.about .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; margin-top: 18px; }
+.about .features > div { padding: 14px 16px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg-soft); }
+.about .features p { margin: 0; font-size: 14px; }
+.about ol { padding-left: 1.4em; }
+.about li + li { margin-top: 4px; }
+.about details { border-bottom: 1px solid var(--border); padding: 12px 0; }
+.about summary { cursor: pointer; font-weight: 600; }
+.about details p { margin: 8px 0 0; }
+.about .foot { margin-top: 36px; font-size: 13px; text-align: center; }
+body.is-ext .about { display: none; }
 body.loaded #welcome { display: none; }
 .drop-card { width: 100%; max-width: 560px; text-align: center; padding: 48px 28px; border: 2px dashed var(--border);
   border-radius: 14px; background: var(--bg-soft); }

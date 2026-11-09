@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://markdown-viewer-online.vercel.app/sitemap.xml

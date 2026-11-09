@@ -125,10 +125,26 @@
     });
   }
 
+  // Mermaid is 3 MB, so the viewer page loads it only when a document has a diagram.
+  // (In the extension's file view it is already loaded by the manifest.)
+  const coreSrc = document.currentScript?.src;
+  let mermaidLoading;
+  function loadMermaid() {
+    if (window.mermaid) return Promise.resolve(true);
+    if (!coreSrc) return Promise.resolve(false);
+    mermaidLoading ||= new Promise((resolve) => {
+      const s = document.createElement('script');
+      s.src = new URL('lib/mermaid.min.js', coreSrc).href;
+      s.onload = () => { applyTheme(); resolve(true); };
+      s.onerror = () => { mermaidLoading = null; resolve(false); };
+      document.head.append(s);
+    });
+    return mermaidLoading;
+  }
   async function renderMermaid(root) {
     const nodes = [...root.querySelectorAll('.mermaid')];
     if (!nodes.length) return;
-    if (!window.mermaid) { nodes.forEach((n) => n.classList.add('mermaid-error')); return; }
+    if (!(await loadMermaid())) { nodes.forEach((n) => n.classList.add('mermaid-error')); return; }
     try { await mermaid.run({ nodes }); } catch (e) {
       nodes.forEach((n) => { if (!n.querySelector('svg')) { n.classList.add('mermaid-error'); n.textContent = n.dataset.src + '\n\n⚠ ' + (e.message || e); } });
     }
