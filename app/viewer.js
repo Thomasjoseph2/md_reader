@@ -355,6 +355,7 @@ async function render(path, anchor, keepScroll) {
     (next ? `<a class="next" href="${hrefFor(next)}"><small>Next →</small><span>${esc(docTitle(next))}</span></a>` : '');
 
   MD.buildToc(el.doc, el.toc, (s) => hrefFor(path, s));
+  addTocHide();
   setActive(path);
   document.title = `${docTitle(path)} · ${state.root}`;
 
@@ -428,17 +429,31 @@ async function exportPdf(all) {
   }
 }
 
-/* ---------- focus: hide both side panels ---------- */
-const focusBtn = $('#focusBtn');
-function setFocus(on) {
-  document.body.classList.toggle('focus', on);
-  focusBtn.setAttribute('aria-pressed', String(on));
-  focusBtn.title = on ? 'Show side panels (\\)' : 'Hide side panels (\\)';
-  focusBtn.setAttribute('aria-label', on ? 'Show side panels' : 'Hide side panels');
-  try { localStorage.setItem('mdv-focus', on ? '1' : ''); } catch {}
+/* ---------- hide the file list / contents panels (remembered per browser) ---------- */
+const TOC_ICON = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="1.75" y="2.25" width="12.5" height="11.5" rx="2"/><path d="M10 2.5v11"/></svg>';
+const panels = { side: { cls: 'hide-side', key: 'mdv-hide-side' }, toc: { cls: 'hide-toc', key: 'mdv-hide-toc' } };
+function setPanel(name, hidden) {
+  const p = panels[name];
+  document.body.classList.toggle(p.cls, hidden);
+  $('#' + name + 'Show').classList.toggle('hidden', !hidden);
+  try { localStorage.setItem(p.key, hidden ? '1' : ''); } catch {}
 }
-try { setFocus(localStorage.getItem('mdv-focus') === '1'); } catch { setFocus(false); }
-focusBtn.onclick = () => setFocus(!document.body.classList.contains('focus'));
+for (const name of Object.keys(panels)) {
+  let saved = false;
+  try { saved = localStorage.getItem(panels[name].key) === '1'; } catch {}
+  setPanel(name, saved);
+  $('#' + name + 'Show').onclick = () => setPanel(name, false);
+}
+$('#sideHide').onclick = () => setPanel('side', true);
+// The contents list is rebuilt for every page, so its hide button is added after each build.
+function addTocHide() {
+  const h = el.toc.querySelector('h4');
+  if (!h) return;
+  const b = document.createElement('button');
+  b.className = 'panel-btn'; b.title = 'Hide contents'; b.setAttribute('aria-label', 'Hide contents'); b.innerHTML = TOC_ICON;
+  b.onclick = () => setPanel('toc', true);
+  h.append(b);
+}
 
 /* ---------- search ---------- */
 function snippet(text, at, q) {
@@ -490,7 +505,6 @@ el.results.addEventListener('click', (e) => {
 addEventListener('keydown', (e) => {
   if (!document.body.classList.contains('loaded')) return;
   const typing = /INPUT|TEXTAREA/.test(document.activeElement.tagName);
-  if (e.key === '\\' && !typing && !e.ctrlKey && !e.metaKey && !e.altKey) { e.preventDefault(); focusBtn.click(); return; }
   if ((e.key === '/' && !typing) || (e.key.toLowerCase() === 'k' && (e.ctrlKey || e.metaKey))) {
     e.preventDefault(); document.body.classList.add('nav-open'); el.search.focus(); el.search.select();
   }
