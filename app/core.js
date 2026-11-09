@@ -12,7 +12,27 @@
   let theme = 'light';
   function applyTheme() {
     document.documentElement.dataset.theme = theme;
-    if (window.mermaid) mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', theme: theme === 'dark' ? 'dark' : 'default' });
+    if (!window.mermaid) return;
+    // Diagrams use the page's own paper colours and font instead of Mermaid's defaults.
+    const dark = theme === 'dark';
+    const c = dark
+      ? { bg: '#121826', box: '#1E2638', border: '#3A4760', text: '#E2E8F0', line: '#94A3B8', alt: '#172A45', note: '#3A3216' }
+      : { bg: '#FDFBF7', box: '#F4F1EA', border: '#CFC6B6', text: '#1A1C20', line: '#6B6760', alt: '#E3EFF7', note: '#FBF0CC' };
+    mermaid.initialize({
+      startOnLoad: false, securityLevel: 'strict', theme: 'base',
+      fontFamily: '"IBM Plex Sans", system-ui, sans-serif',
+      themeVariables: {
+        darkMode: dark, background: c.bg, fontSize: '15px', fontFamily: '"IBM Plex Sans", system-ui, sans-serif',
+        primaryColor: c.box, primaryBorderColor: c.border, primaryTextColor: c.text,
+        secondaryColor: c.alt, secondaryBorderColor: c.border, secondaryTextColor: c.text,
+        tertiaryColor: c.bg, tertiaryBorderColor: c.border, tertiaryTextColor: c.text,
+        lineColor: c.line, textColor: c.text, mainBkg: c.box, nodeBorder: c.border, clusterBkg: c.bg, clusterBorder: c.border,
+        edgeLabelBackground: c.bg, noteBkgColor: c.note, noteBorderColor: c.border, noteTextColor: c.text,
+        actorBkg: c.box, actorBorder: c.border, actorTextColor: c.text, signalColor: c.line, signalTextColor: c.text,
+        labelBoxBkgColor: c.box, labelBoxBorderColor: c.border, labelTextColor: c.text,
+        attributeBackgroundColorOdd: c.bg, attributeBackgroundColorEven: c.box,
+      },
+    });
   }
   function initTheme() {
     let saved = null;
@@ -106,6 +126,10 @@
       pre.append(b);
     });
     root.querySelectorAll('table').forEach((t) => { const w = document.createElement('div'); w.className = 'table-wrap'; t.replaceWith(w); w.append(t); });
+    // Tables wider than the text column may use the page margins (see .table-wrap.wide in viewer.css).
+    requestAnimationFrame(() => root.querySelectorAll('.table-wrap').forEach((w) => {
+      if (w.firstElementChild.scrollWidth > w.clientWidth + 2) w.classList.add('wide');
+    }));
     root.querySelectorAll('blockquote').forEach((bq) => {
       const p = bq.firstElementChild;
       if (!p || p.tagName !== 'P') return;

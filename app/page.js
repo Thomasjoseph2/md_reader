@@ -9,13 +9,21 @@
   const { esc } = MD;
 
   MD.initTheme();
+  const font = (f) => `url(${chrome.runtime.getURL('fonts/' + f)}) format("woff2")`;
+  const faces = document.createElement('style');
+  faces.textContent = [['IBM Plex Sans', 'normal', '400', 'plex-sans-400.woff2'], ['IBM Plex Sans', 'italic', '400', 'plex-sans-400-italic.woff2'],
+    ['IBM Plex Sans', 'normal', '500', 'plex-sans-500.woff2'], ['IBM Plex Sans', 'normal', '600', 'plex-sans-600.woff2'],
+    ['IBM Plex Sans', 'normal', '700', 'plex-sans-700.woff2'], ['Newsreader', 'normal', '200 800', 'newsreader-opsz.woff2'],
+    ['JetBrains Mono', 'normal', '400', 'jetbrains-mono-400.woff2']]
+    .map(([fam, style, weight, file]) => `@font-face{font-family:"${fam}";font-style:${style};font-weight:${weight};font-display:swap;src:${font(file)}}`).join('');
+  document.head.append(faces);
   const meta = document.createElement('meta');
   meta.name = 'viewport'; meta.content = 'width=device-width, initial-scale=1';
   document.head.append(meta);
   document.body.className = 'loaded single';
   document.body.innerHTML = `
 <header>
-  <div class="brand"><img src="${chrome.runtime.getURL('icons/32.png')}" width="20" height="20" alt=""><span class="hide-sm">MD Viewer</span></div>
+  <div class="brand"><img src="${chrome.runtime.getURL('icons/32.png')}" width="20" height="20" alt=""><span class="hide-sm">Markdown Viewer</span></div>
   <span id="rootName">${esc(name)}</span>
   <span class="spacer"></span>
   <button class="btn" id="pdfBtn" title="Save as PDF"><span>PDF</span></button>
