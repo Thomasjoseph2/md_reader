@@ -220,6 +220,7 @@ main { min-width: 0; padding: 32px 36px 96px; }
 .md .frontmatter { font-size: 13px; color: var(--muted); background: var(--bg-soft); }
 .md .mermaid { text-align: center; overflow-x: auto; padding: 8px 0; }
 .md .mermaid svg { max-width: 100%; height: auto; }
+.md .mermaid:not([data-processed]):not(.mermaid-error) { color: transparent; min-height: 48px; } /* no raw code flash while drawing */
 .md .mermaid-error { text-align: left; white-space: pre; font-family: var(--font-mono); font-size: 12px; color: var(--danger); }
 .md .alert { color: var(--text); padding: 12px 18px; border-left-width: 3px; border-radius: 0 10px 10px 0; }
 .md .alert > :last-child { margin-bottom: 0; }
@@ -398,3 +399,11 @@ body.one-file .sidebar, body.one-file #menuBtn { display: none !important; }
   .cmt-panel, .cmt-float, .cmt-badge, .modal { display: none !important; }
   ::highlight(mdv-comment), ::highlight(mdv-comment-active) { background-color: transparent; }
 }
+
+/* Focus: hide the file list and "On this page" (desktop only; phones already hide them) */
+#focusBtn[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+@media (min-width: 861px) {
+  body.focus .sidebar, body.focus .toc { display: none !important; }
+  body.loaded.focus .layout { grid-template-columns: minmax(0, 1fr); }
+}
+@media (min-width: 1201px) { body.loaded.focus.cmt-open .layout { grid-template-columns: minmax(0, 1fr) 380px; } }

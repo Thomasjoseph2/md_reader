@@ -428,6 +428,18 @@ async function exportPdf(all) {
   }
 }
 
+/* ---------- focus: hide both side panels ---------- */
+const focusBtn = $('#focusBtn');
+function setFocus(on) {
+  document.body.classList.toggle('focus', on);
+  focusBtn.setAttribute('aria-pressed', String(on));
+  focusBtn.title = on ? 'Show side panels (\\)' : 'Hide side panels (\\)';
+  focusBtn.setAttribute('aria-label', on ? 'Show side panels' : 'Hide side panels');
+  try { localStorage.setItem('mdv-focus', on ? '1' : ''); } catch {}
+}
+try { setFocus(localStorage.getItem('mdv-focus') === '1'); } catch { setFocus(false); }
+focusBtn.onclick = () => setFocus(!document.body.classList.contains('focus'));
+
 /* ---------- search ---------- */
 function snippet(text, at, q) {
   const start = Math.max(0, at - 50), end = Math.min(text.length, at + q.length + 70);
@@ -478,6 +490,7 @@ el.results.addEventListener('click', (e) => {
 addEventListener('keydown', (e) => {
   if (!document.body.classList.contains('loaded')) return;
   const typing = /INPUT|TEXTAREA/.test(document.activeElement.tagName);
+  if (e.key === '\\' && !typing && !e.ctrlKey && !e.metaKey && !e.altKey) { e.preventDefault(); focusBtn.click(); return; }
   if ((e.key === '/' && !typing) || (e.key.toLowerCase() === 'k' && (e.ctrlKey || e.metaKey))) {
     e.preventDefault(); document.body.classList.add('nav-open'); el.search.focus(); el.search.select();
   }
