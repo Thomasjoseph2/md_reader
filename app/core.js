@@ -41,17 +41,30 @@
       },
     ))).join('');
   }
-  function toHtml(text, { name = '', wiki } = {}) {
-    let src = text, front = '';
+  // sourceLines: tag each top-level block with the source lines it came from (data-line / data-line-end).
+  function toHtml(text, { name = '', wiki, sourceLines = false } = {}) {
+    let src = text, front = '', firstLine = 1;
     const fm = src.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?/);
     if (fm) {
       src = src.slice(fm[0].length);
+      firstLine += (fm[0].match(/\n/g) || []).length;
       front = `<details class="frontmatter"><summary>Front matter</summary><pre><code>${esc(fm[1])}</code></pre></details>`;
     }
     if (/\.txt$/i.test(name)) return front + `<pre class="plain">${esc(src)}</pre>`;
     if (/\.mdx$/i.test(name)) src = src.replace(/^(import|export)\s.*$/gm, '');
     if (wiki) src = wikilinks(src, wiki);
-    return front + DOMPurify.sanitize(marked.parse(src));
+    if (!sourceLines) return front + DOMPurify.sanitize(marked.parse(src));
+    const tokens = marked.lexer(src);
+    let line = firstLine, html = '';
+    for (const tok of tokens) {
+      const start = line, breaks = (tok.raw.match(/\n/g) || []).length;
+      line += breaks;
+      if (tok.type === 'space') continue;
+      const end = Math.max(start, start + breaks - (tok.raw.endsWith('\n') ? 1 : 0));
+      html += marked.parser(Object.assign([tok], { links: tokens.links }))
+        .replace(/^(\s*<[a-z][a-z0-9-]*)/i, `$1 data-line="${start}" data-line-end="${end}"`);
+    }
+    return front + DOMPurify.sanitize(html);
   }
   function docTitle(text) {
     const m = (text || '').match(/^#\s+(.+?)\s*#*\s*$/m);
@@ -82,6 +95,7 @@
       if (lang === 'mermaid') {
         const d = document.createElement('div');
         d.className = 'mermaid'; d.textContent = code.textContent; d.dataset.src = code.textContent;
+        if (pre.dataset.line) { d.dataset.line = pre.dataset.line; d.dataset.lineEnd = pre.dataset.lineEnd; }
         pre.replaceWith(d);
         return;
       }

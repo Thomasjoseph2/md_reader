@@ -308,7 +308,7 @@ function wikiResolve(target, embed) {
   }
   return '/' + (best || target + (hasExt ? '' : '.md'));
 }
-const toHtml = (path) => MD.toHtml(state.texts.get(path), { name: path, wiki: wikiResolve });
+const toHtml = (path) => MD.toHtml(state.texts.get(path), { name: path, wiki: wikiResolve, sourceLines: true });
 function enhanceDoc(root, path, { prefix = '', link = hrefFor } = {}) {
   const dir = dirOf(path);
   MD.enhance(root, {

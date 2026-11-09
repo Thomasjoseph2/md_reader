@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Markdown Folder Viewer",
   "short_name": "MD Viewer",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Read Markdown files and whole folders of docs with working links, search, diagrams and PDF export. Nothing is uploaded.",
   "icons": {
     "16": "icons/16.png",

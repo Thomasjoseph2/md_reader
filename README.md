@@ -14,6 +14,20 @@ Files never leave your computer. Nothing is uploaded and nothing is tracked.
   Mermaid diagrams, front matter
 - Skips `node_modules`, `.git` and similar folders
 
+## Review comments
+
+Team leads and PMs can review a set of docs and send their comments back as one file.
+
+1. Select text and click **Comment**, or use **+ Add comment** for a whole file, a folder or the whole project.
+   Types: comment, question, change request (with suggested text), looks good.
+2. **Download review** saves `review-<folder>-<name>-<date>.md`: a readable report, plus the exact data (file,
+   section, line numbers, quoted text, suggested text, author, time, file version) in a JSON block at the end,
+   ready for an AI agent to apply.
+3. The owner opens the same folder, clicks **Open review files** (several at once is fine) and sees every comment in
+   place. Reviews made on a sub-folder or a parent folder still line up.
+
+Comments are kept in the browser until downloaded, and the viewer warns before leaving with comments not downloaded.
+
 ## Features
 
 - Folder tree, breadcrumbs, previous / next, an "On this page" contents list
