@@ -18,6 +18,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="icons/32.png">
 <link rel="apple-touch-icon" href="icons/128.png">
+<link rel="stylesheet" href="fonts.css">
 <link rel="stylesheet" href="viewer.css">
 <link rel="stylesheet" href="lib/hljs-themes.css">
 <script defer src="lib/marked.min.js"></script>
@@ -91,47 +92,77 @@
 </header>
 
 <section id="welcome">
-  <div class="drop-card">
-    <svg width="44" height="44" viewBox="0 0 16 16" fill="var(--accent)"><path d="M1.75 1A1.75 1.75 0 0 0 0 2.75v10.5C0 14.216.784 15 1.75 15h12.5A1.75 1.75 0 0 0 16 13.25v-8.5A1.75 1.75 0 0 0 14.25 3H7.5a.25.25 0 0 1-.2-.1l-.9-1.2C6.07 1.26 5.55 1 5 1H1.75Z"/></svg>
-    <h1>Markdown viewer for files and folders</h1>
-    <p>Drop an <code>.md</code> file or a whole folder here, or pick one. Plans, specs, notes, docs: every file shows formatted, with working links between them.</p>
-    <div class="actions">
-      <button class="btn primary" id="openFolderBtn">Open folder</button>
-      <button class="btn" id="openFilesBtn">Open files</button>
+  <div class="hero">
+    <div class="hero-copy">
+      <p class="eyebrow">Free · Private · No sign-up</p>
+      <h1>Markdown docs your team can actually <em>read</em> and <em>review</em>.</h1>
+      <p class="lede">Open an <code>.md</code> file or a whole folder of plans and specs, and read it like a website. Reviewers comment in the margin and send you back one review file.</p>
+      <div class="actions">
+        <button class="btn primary big" id="openFolderBtn">Open a folder</button>
+        <button class="btn big" id="openFilesBtn">Open files</button>
+      </div>
+      <button class="btn hidden" id="reopenBtn"></button>
+      <p class="fine">Or drop files anywhere on this page. They stay on your computer. Nothing is uploaded.</p>
+      <p id="fileTip" class="hidden">To open <code>.md</code> files straight from your computer in Chrome, turn on “Allow access to file URLs”.<button class="btn" id="fileTipBtn">Open settings</button></p>
     </div>
-    <button class="btn hidden" id="reopenBtn"></button>
-    <p class="fine">Your files stay on your computer. Nothing is uploaded.</p>
-    <p id="fileTip" class="hidden">To open <code>.md</code> files straight from your computer in Chrome, turn on “Allow access to file URLs”.<button class="btn" id="fileTipBtn">Open settings</button></p>
+    <div class="hero-art" aria-hidden="true">
+      <div class="paper">
+        <div class="paper-path">plans / phase-1 / README.md</div>
+        <div class="paper-h">Phase 1: Pilot launch</div>
+        <p>Ship the first version to <span class="hl">five pilot teams</span> by March, then collect feedback for two weeks before Phase 2.</p>
+        <div class="paper-lines"><i></i><i style="width:88%"></i><i style="width:64%"></i></div>
+        <div class="paper-table"><span>Owner</span><span>Deliverable</span><span>Design</span><span>Clickable prototype</span><span>Engineering</span><span>Sign-in and sync</span></div>
+      </div>
+      <div class="margin-note">
+        <div class="ci-top"><span class="chip t-question">Question</span><b>Priya, Product</b></div>
+        <p>Which five teams? Can we name them here?</p>
+      </div>
+    </div>
   </div>
 
   <div class="about">
-    <h2>Open and read Markdown files online</h2>
-    <p>Markdown (<code>.md</code>) files are plain text. Opened in a text editor or a browser tab, they show raw symbols:
-      <code>#</code>, <code>**</code>, <code>|</code>. This free viewer shows them the way GitHub does, and lets you move
-      around a whole folder of them like a small website.</p>
-    <div class="features">
-      <div><h3>Files or whole folders</h3><p>One file, several files, or a folder with sub-folders. README and index files open first.</p></div>
-      <div><h3>Links that work</h3><p>Links between files, <code>../</code> paths, <code>#headings</code> and Obsidian <code>[[wiki links]]</code>.</p></div>
-      <div><h3>Search everything</h3><p>Search across every file at once. Matches are highlighted on the page.</p></div>
-      <div><h3>Diagrams and code</h3><p>Tables, task lists, callouts, images, code highlighting and Mermaid diagrams.</p></div>
-      <div><h3>Markdown to PDF</h3><p>Save one page, or the whole folder as one PDF with a contents page.</p></div>
-      <div><h3>Private</h3><p>Files are read in your browser. Nothing is uploaded, and there is no account.</p></div>
-    </div>
+    <section>
+      <h2>How a review works</h2>
+      <ol class="steps">
+        <li><b>Share the folder</b><span>Send your docs the way you already share files. Reviewers open them here, with no account.</span></li>
+        <li><b>Comment in the margin</b><span>Select any sentence to comment, ask a question or suggest new wording. Or comment on a whole file or folder.</span></li>
+        <li><b>Get one file back</b><span>Each reviewer downloads a review file. Open them together and every comment shows in place, with who said it.</span></li>
+      </ol>
+    </section>
 
-    <h2>How to open an .md file</h2>
-    <ol>
-      <li>Drag the <code>.md</code> file (or a folder) onto this page. Or click <b>Open files</b> or <b>Open folder</b>.</li>
-      <li>It shows formatted at once. Pick other files from the list on the left.</li>
-      <li>Click <b>PDF</b> to save it as a PDF, or <b>/</b> to search.</li>
-    </ol>
+    <section>
+      <h2>Open and read Markdown files online</h2>
+      <p class="intro">Markdown (<code>.md</code>) files are plain text. In a text editor or a browser tab they show raw symbols like
+        <code>#</code>, <code>**</code> and <code>|</code>. This free viewer shows them properly, and lets you move around a whole folder of them like a small website.</p>
+      <ul class="feature-list">
+        <li><b>Files or whole folders</b>One file, several files, or a folder with sub-folders. README and index files open first.</li>
+        <li><b>Links that work</b>Links between files, <code>../</code> paths, <code>#headings</code> and Obsidian <code>[[wiki links]]</code>.</li>
+        <li><b>Search everything</b>Search across every file at once, with matches highlighted on the page.</li>
+        <li><b>Diagrams and code</b>Tables, task lists, callouts, images, code highlighting and Mermaid diagrams.</li>
+        <li><b>Markdown to PDF</b>Save one page, or the whole folder as one PDF with a contents page.</li>
+        <li><b>Private by design</b>Files are read in your browser. Nothing is uploaded, and there is no account.</li>
+      </ul>
+    </section>
 
-    <h2>Questions</h2>
-    <details><summary>What is an .md file?</summary><p>A Markdown file: plain text with simple marks for headings, lists, links and tables. README files, notes apps like Obsidian, and many project plans and docs use it.</p></details>
-    <details><summary>Are my files uploaded?</summary><p>No. Your browser reads them on your own computer. Nothing is sent anywhere, so it is safe for private documents.</p></details>
-    <details><summary>Which Markdown does it support?</summary><p>GitHub-style Markdown: tables, task lists, fenced code with highlighting, <code>&gt; [!NOTE]</code> callouts, front matter, images, Mermaid diagrams and <code>[[wiki links]]</code>. Also <code>.markdown</code>, <code>.mdx</code> and <code>.txt</code> files.</p></details>
-    <details><summary>Can I convert Markdown to PDF?</summary><p>Yes. Click <b>PDF</b>, then choose “Save as PDF” in the print window. Links between documents still work inside the PDF.</p></details>
-    <details><summary>Does it work on a phone?</summary><p>Yes. Tap <b>Open files</b> to pick <code>.md</code> files. Opening whole folders works best on a computer.</p></details>
-    <details><summary>Is there a Chrome extension?</summary><p>Yes. The extension also shows <code>.md</code> files you open in Chrome straight from your computer. The source is on <a href="https://github.com/Thomasjoseph2/md_reader" rel="noopener">GitHub</a>.</p></details>
+    <section>
+      <h2>How to open an .md file</h2>
+      <ol class="howto">
+        <li>Drag the <code>.md</code> file (or a folder) onto this page. Or click <b>Open files</b> or <b>Open a folder</b>.</li>
+        <li>It shows formatted at once. Pick other files from the list on the left.</li>
+        <li>Click <b>PDF</b> to save it as a PDF, <b>Comments</b> to review it, or press <b>/</b> to search.</li>
+      </ol>
+    </section>
+
+    <section class="faq">
+      <h2>Questions</h2>
+      <details><summary>What is an .md file?</summary><p>A Markdown file: plain text with simple marks for headings, lists, links and tables. README files, notes apps like Obsidian, and many project plans and docs use it.</p></details>
+      <details><summary>Are my files uploaded?</summary><p>No. Your browser reads them on your own computer. Nothing is sent anywhere, so it is safe for private documents.</p></details>
+      <details><summary>How do review comments work?</summary><p>Select text and click <b>Comment</b>. When you are done, click <b>Download review</b> and send that one file back. The owner opens it with <b>Open review files</b> and sees every comment in place.</p></details>
+      <details><summary>Which Markdown does it support?</summary><p>GitHub-style Markdown: tables, task lists, fenced code with highlighting, <code>&gt; [!NOTE]</code> callouts, front matter, images, Mermaid diagrams and <code>[[wiki links]]</code>. Also <code>.markdown</code>, <code>.mdx</code> and <code>.txt</code> files.</p></details>
+      <details><summary>Can I convert Markdown to PDF?</summary><p>Yes. Click <b>PDF</b>, then choose “Save as PDF” in the print window. Links between documents still work inside the PDF.</p></details>
+      <details><summary>Does it work on a phone?</summary><p>Yes. Tap <b>Open files</b> to pick <code>.md</code> files. Opening whole folders works best on a computer.</p></details>
+      <details><summary>Is there a Chrome extension?</summary><p>Yes. The extension also shows <code>.md</code> files you open in Chrome straight from your computer. The source is on <a href="https://github.com/Thomasjoseph2/md_reader" rel="noopener">GitHub</a>.</p></details>
+    </section>
 
     <p class="foot">Free and open source · <a href="https://github.com/Thomasjoseph2/md_reader" rel="noopener">GitHub</a> · <a href="https://github.com/Thomasjoseph2/md_reader/blob/main/PRIVACY.md" rel="noopener">Privacy</a></p>
   </div>
