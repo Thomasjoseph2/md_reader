@@ -1,0 +1,76 @@
+{
+  "manifest_version": 3,
+  "name": "Markdown Folder Viewer",
+  "short_name": "MD Viewer",
+  "version": "1.0.0",
+  "description": "Read Markdown files and whole folders of docs with working links, search, diagrams and PDF export. Nothing is uploaded.",
+  "icons": {
+    "16": "icons/16.png",
+    "32": "icons/32.png",
+    "48": "icons/48.png",
+    "128": "icons/128.png"
+  },
+  "action": {
+    "default_title": "Open Markdown Folder Viewer",
+    "default_icon": {
+      "16": "icons/16.png",
+      "32": "icons/32.png"
+    }
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "file:///*"
+      ],
+      "include_globs": [
+        "*.md",
+        "*.md#*",
+        "*.md?*",
+        "*.MD",
+        "*.MD#*",
+        "*.MD?*",
+        "*.markdown",
+        "*.markdown#*",
+        "*.markdown?*",
+        "*.mdown",
+        "*.mdown#*",
+        "*.mdown?*",
+        "*.mkd",
+        "*.mkd#*",
+        "*.mkd?*",
+        "*.mkdn",
+        "*.mkdn#*",
+        "*.mkdn?*",
+        "*.mdx",
+        "*.mdx#*",
+        "*.mdx?*"
+      ],
+      "js": [
+        "lib/marked.min.js",
+        "lib/purify.min.js",
+        "lib/highlight.min.js",
+        "lib/mermaid.min.js",
+        "core.js",
+        "page.js"
+      ],
+      "css": [
+        "viewer.css",
+        "lib/hljs-themes.css"
+      ],
+      "run_at": "document_end"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "icons/32.png"
+      ],
+      "matches": [
+        "file:///*"
+      ]
+    }
+  ]
+}
