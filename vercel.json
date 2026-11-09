@@ -5,9 +5,14 @@
   "outputDirectory": "app",
   "redirects": [
     {
-      "source": "/:path*",
-      "has": [{ "type": "host", "value": "mdreader-lac.vercel.app" }],
-      "destination": "https://markdown-viewer-online.vercel.app/:path*",
+      "source": "/(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "mdreader-lac.vercel.app"
+        }
+      ],
+      "destination": "https://markdown-viewer-online.vercel.app/$1",
       "permanent": true
     }
   ],
@@ -15,17 +20,33 @@
     {
       "source": "/(.*)",
       "headers": [
-        { "key": "X-Content-Type-Options", "value": "nosniff" },
-        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" }
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        }
       ]
     },
     {
       "source": "/(lib|icons)/(.*)",
-      "headers": [{ "key": "Cache-Control", "value": "public, max-age=604800" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=604800"
+        }
+      ]
     },
     {
       "source": "/manifest.json",
-      "headers": [{ "key": "X-Robots-Tag", "value": "noindex" }]
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex"
+        }
+      ]
     }
   ]
 }
