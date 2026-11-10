@@ -434,3 +434,13 @@ body.cmt-open .edge-right { right: 380px; }
 }
 @media (max-width: 860px) { #sideHide, .edge-tab { display: none !important; } }
 @media print { .edge-tab, .panel-btn { display: none !important; } }
+/* One file open: these come last so the panel-hide and comment rules above can't bring back a sidebar column */
+body.one-file #sideShow { display: none !important; }
+@media (min-width: 1201px) {
+  body.loaded.one-file .layout { grid-template-columns: minmax(0, 1fr) 240px; }
+  body.loaded.one-file.hide-toc .layout { grid-template-columns: minmax(0, 1fr); }
+  body.loaded.one-file.cmt-open .layout,
+  body.loaded.one-file.hide-toc.cmt-open .layout { grid-template-columns: minmax(0, 1fr) 380px; }
+}
+@media (max-width: 1200px) { body.loaded.one-file .layout { grid-template-columns: minmax(0, 1fr); } }
+
