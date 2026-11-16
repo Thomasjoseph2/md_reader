@@ -463,26 +463,31 @@ async function exportPdf(all) {
   }
 }
 
-/* ---------- show / hide the side panels: one button, remembered per browser ---------- */
-const PANEL_KEYS = { 'hide-side': 'mdv-hide-side', 'hide-toc': 'mdv-hide-toc' };
-const panelsHidden = () => Object.keys(PANEL_KEYS).every((c) => document.body.classList.contains(c));
-function setPanels(hidden) {
-  for (const [cls, key] of Object.entries(PANEL_KEYS)) {
-    document.body.classList.toggle(cls, hidden);
-    try { localStorage.setItem(key, hidden ? '1' : ''); } catch {}
-  }
-  $('#panelsBtn').setAttribute('aria-pressed', String(hidden));
+/* ---------- show / hide the file list and the contents (separately, remembered per browser) ---------- */
+const PANELS = {
+  side: { cls: 'hide-side', key: 'mdv-hide-side', btn: '#sideBtn', what: 'the file list' },
+  toc:  { cls: 'hide-toc',  key: 'mdv-hide-toc',  btn: '#tocBtn',  what: 'the contents' },
+};
+function setPanel(name, hidden) {
+  const p = PANELS[name], b = $(p.btn);
+  document.body.classList.toggle(p.cls, hidden);
+  b.setAttribute('aria-pressed', String(hidden));
+  b.title = b.ariaLabel = (hidden ? 'Show ' : 'Hide ') + p.what;
+  try { localStorage.setItem(p.key, hidden ? '1' : ''); } catch {}
 }
-for (const [cls, key] of Object.entries(PANEL_KEYS)) {
+for (const [name, p] of Object.entries(PANELS)) {
   let saved = false;
-  try { saved = localStorage.getItem(key) === '1'; } catch {}
-  document.body.classList.toggle(cls, saved);
+  try { saved = localStorage.getItem(p.key) === '1'; } catch {}
+  setPanel(name, saved);
+  $(p.btn).onclick = () => setPanel(name, !document.body.classList.contains(p.cls));
 }
-$('#panelsBtn').setAttribute('aria-pressed', String(panelsHidden()));
-$('#panelsBtn').onclick = () => setPanels(!panelsHidden());
+// The \ key hides or shows both at once.
 addEventListener('keydown', (e) => {
   if (e.key !== '\\' || e.ctrlKey || e.metaKey || e.altKey || /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) return;
-  if (document.body.classList.contains('loaded')) { e.preventDefault(); setPanels(!panelsHidden()); }
+  if (!document.body.classList.contains('loaded')) return;
+  e.preventDefault();
+  const hide = !(document.body.classList.contains('hide-side') && document.body.classList.contains('hide-toc'));
+  setPanel('side', hide); setPanel('toc', hide);
 });
 
 /* ---------- search ---------- */
