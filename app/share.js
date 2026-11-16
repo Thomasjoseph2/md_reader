@@ -17,16 +17,30 @@
 
   async function whoAmI() { try { me = (await api('auth/me')).data.user || null; } catch { me = null; } return me; }
 
-  // Google sign-in runs in a small popup so the folder you opened stays on this page.
+  // Google sign-in runs in a small popup so the folder you opened stays on this page. Google's pages cut the link
+  // between the popup and this page, so we do not rely on it: the popup pings a same-origin channel when it is done,
+  // and we also check the session every couple of seconds (for up to 3 minutes).
+  let signInRun = 0;
   function signIn() {
+    const run = ++signInRun;                                  // a newer click replaces an older wait
     return new Promise((resolve) => {
-      const w = window.open('/api/auth/google?return=' + encodeURIComponent('/'), 'mdv-signin', 'width=480,height=640');
+      const w = window.open('/api/auth/google?popup=1&return=' + encodeURIComponent('/'), 'mdv-signin', 'width=480,height=640');
       if (!w) { location.href = '/api/auth/google?return=' + encodeURIComponent(location.pathname + location.search); return; }
-      let done = false;
-      const finish = async () => { if (done) return; done = true; removeEventListener('message', onMsg); clearInterval(t); resolve(await whoAmI()); };
-      const onMsg = (e) => { if (e.origin === location.origin && e.data && e.data.mdvAuth) finish(); };
+      let done = false, bc, timer, stopAt = Date.now() + 180000;
+      const finish = (user) => {
+        if (done) return; done = true; clearInterval(timer);
+        if (bc) bc.close(); removeEventListener('message', onMsg);
+        resolve(user);
+      };
+      const check = async () => {
+        if (run !== signInRun) return finish(null);
+        const u = await whoAmI();
+        if (u) { try { w.close(); } catch {} finish(u); } else if (Date.now() > stopAt) finish(null);
+      };
+      const onMsg = (e) => { if (e.origin === location.origin && e.data && e.data.mdvAuth) check(); };
       addEventListener('message', onMsg);
-      const t = setInterval(() => { if (w.closed) finish(); }, 700);
+      try { bc = new BroadcastChannel('mdv-auth'); bc.onmessage = check; } catch {}
+      timer = setInterval(check, 2000);
     });
   }
 

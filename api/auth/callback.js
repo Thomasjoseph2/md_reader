@@ -37,8 +37,11 @@ module.exports = async (req, res) => {
     repo.housekeeping.purge().catch(() => {});
 
     const ret = JSON.stringify(saved.ret).replace(/</g, '\\u003c');
-    page(res, 200, 'Signed in', 'You can close this window.',
-      `<script>if(window.opener){window.opener.postMessage({mdvAuth:true},location.origin);window.close()}else{location.replace(${ret})}</script>`);
+    // Popup: tell the page that opened it (Google's pages sever window.opener, so use a same-origin channel) and close.
+    // Full-page sign-in: just go back where the user was.
+    const popupJs = `try{new BroadcastChannel('mdv-auth').postMessage('done')}catch(e){}try{window.opener&&window.opener.postMessage({mdvAuth:true},location.origin)}catch(e){}window.close()`;
+    page(res, 200, 'Signed in', 'You can close this window and go back to the viewer.',
+      `<script>${saved.popup ? popupJs : `location.replace(${ret})`}</script>`);
   } catch (e) {
     console.error('callback failed', e.message);
     page(res, 500, 'Something went wrong', 'Please try again.');
