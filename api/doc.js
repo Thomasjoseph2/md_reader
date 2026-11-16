@@ -21,7 +21,7 @@ module.exports = async (req, res) => {
 
     if (doc.visibility === 'restricted') {
       if (!user) return L.send(res, 401, { needsLogin: true });
-      if (!doc.emails.includes(user.email)) return L.send(res, 403, { error: `This doc is not shared with ${user.email}. Ask the owner to add you, or sign in with another Google account.`, signedInAs: user.email });
+      if (!doc.emails.includes(user.email)) return L.send(res, 403, { error: 'This doc is not shared with you. Ask the owner to add you, or sign in with a different Google account.' });
       return out();
     }
 
