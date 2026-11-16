@@ -1,0 +1,8 @@
+{
+  "name": "md-viewer",
+  "private": true,
+  "description": "Markdown Folder Viewer. The app is static (app/); api/ holds the share-link functions.",
+  "dependencies": {
+    "pg": "^8.13.0"
+  }
+}

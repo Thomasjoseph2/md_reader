@@ -444,3 +444,27 @@ body.one-file #sideShow { display: none !important; }
 }
 @media (max-width: 1200px) { body.loaded.one-file .layout { grid-template-columns: minmax(0, 1fr); } }
 
+
+/* ---------- share link ---------- */
+.sh-notice { margin: 0 0 14px; color: var(--muted); font-size: 14px; }
+.sh-notice b { color: var(--fg, inherit); }
+.sh-row { display: grid; gap: 4px; margin: 0 0 12px; font-size: 13px; }
+.sh-row small { color: var(--muted); }
+.sh-row input, .sh-row select, .sh-link input { width: 100%; padding: 8px 10px; font: inherit; color: inherit; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; }
+.sh-link { display: flex; gap: 8px; margin: 0 0 16px; }
+.sh-link input { flex: 1; min-width: 0; font-family: var(--mono, ui-monospace, monospace); font-size: 12px; }
+.sh-err { margin: 0 0 12px; color: #cf222e; font-size: 13px; }
+#shMine { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border); }
+#shMine h4 { margin: 0 0 8px; font-size: 13px; color: var(--muted); font-weight: 600; }
+.sh-item { display: flex; align-items: center; gap: 8px; padding: 6px 0; font-size: 13px; }
+.sh-item .t { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sh-item .t small { color: var(--muted); display: block; }
+.sh-item .btn { padding: 3px 9px; font-size: 12px; }
+.shared-note { color: var(--muted); font-size: 12px; white-space: nowrap; }
+.sh-user { margin: 0 0 10px; font-size: 12.5px; color: var(--muted); }
+.sh-access { display: grid; gap: 8px; margin: 0 0 14px; padding: 0; border: 0; }
+.sh-access label { display: grid; grid-template-columns: auto 1fr; column-gap: 8px; align-items: baseline; padding: 9px 10px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; font-size: 14px; }
+.sh-access label:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+.sh-access small { grid-column: 2; color: var(--muted); font-size: 12.5px; }
+.sh-row textarea { width: 100%; padding: 8px 10px; font: inherit; color: inherit; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; resize: vertical; }
+#auMsg { margin: 0 0 16px; }

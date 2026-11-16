@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Markdown Viewer Online – Open .md Files and Folders Free</title>
-<meta name="description" content="Free online Markdown viewer. Open an .md file, several files or a whole folder and read them formatted, with working links, search, Mermaid diagrams and PDF export. Nothing is uploaded.">
+<meta name="description" content="Free online Markdown viewer. Open an .md file, several files or a whole folder and read them formatted, with working links, search, Mermaid diagrams and PDF export. Files stay on your computer unless you create a share link.">
 <link rel="canonical" href="https://markdown-viewer-online.vercel.app/">
 <meta name="theme-color" content="#0969da">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Markdown Viewer Online">
 <meta property="og:title" content="Markdown Viewer Online – open .md files and folders">
-<meta property="og:description" content="Open an .md file or a whole folder of Markdown docs and read it like a website. Search, diagrams, PDF. Free, and nothing is uploaded.">
+<meta property="og:description" content="Open an .md file or a whole folder of Markdown docs and read it like a website. Search, diagrams, PDF. Free. Files stay on your computer unless you share a link.">
 <meta property="og:url" content="https://markdown-viewer-online.vercel.app/">
 <meta property="og:image" content="https://markdown-viewer-online.vercel.app/og-image.png">
 <meta property="og:image:width" content="1200">
@@ -34,7 +34,7 @@
       "name": "Markdown Viewer Online",
       "alternateName": ["Markdown Folder Viewer", "MD File Viewer"],
       "url": "https://markdown-viewer-online.vercel.app/",
-      "description": "Free online Markdown viewer for .md files and whole folders, with working links, search, Mermaid diagrams and PDF export. Files are read in the browser and never uploaded.",
+      "description": "Free online Markdown viewer for .md files and whole folders, with working links, search, Mermaid diagrams and PDF export. Files are read in the browser and stay on your computer unless you choose to create a share link.",
       "applicationCategory": "UtilitiesApplication",
       "operatingSystem": "Any",
       "browserRequirements": "Requires a modern web browser",
@@ -46,9 +46,9 @@
       "@type": "FAQPage",
       "mainEntity": [
         { "@type": "Question", "name": "How do I open an .md file?", "acceptedAnswer": { "@type": "Answer", "text": "Open this page, then drag the .md file onto it or click Open files. It shows formatted straight away. To read a whole folder of Markdown files, click Open folder." } },
-        { "@type": "Question", "name": "Are my files uploaded?", "acceptedAnswer": { "@type": "Answer", "text": "No. Files are read inside your browser on your own computer. Nothing is sent to a server." } },
+        { "@type": "Question", "name": "Are my files uploaded?", "acceptedAnswer": { "@type": "Answer", "text": "No. Files are read inside your browser on your own computer. They are only uploaded if you click Share and create a link, and you can remove the link at any time." } },
         { "@type": "Question", "name": "Can I convert Markdown to PDF?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Click PDF to save the page you are reading, or the whole folder as one PDF with a contents page." } },
-        { "@type": "Question", "name": "Is it free?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. It is free, with no account and no limits." } }
+        { "@type": "Question", "name": "Is it free?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. It is free. Reading needs no account. You only sign in with Google to create share links." } }
       ]
     }
   ]
@@ -73,6 +73,10 @@
   <button class="btn when-loaded" id="cmtBtn" aria-expanded="false" title="Comments and review">
     <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M1 2.75C1 1.784 1.784 1 2.75 1h10.5c.966 0 1.75.784 1.75 1.75v7.5A1.75 1.75 0 0 1 13.25 12H9.06l-2.573 2.573A1.458 1.458 0 0 1 4 13.543V12H2.75A1.75 1.75 0 0 1 1 10.25Zm1.75-.25a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h2a.75.75 0 0 1 .75.75v2.19l2.72-2.72a.749.749 0 0 1 .53-.22h4.5a.25.25 0 0 0 .25-.25v-7.5a.25.25 0 0 0-.25-.25Z"/></svg>
     <span class="hide-sm">Comments</span><span class="cmt-count" id="cmtCount"></span><span class="cmt-dot hidden" id="cmtDot" title="Not downloaded yet"></span>
+  </button>
+  <button class="btn when-loaded" id="shareBtn" title="Create a link to share these docs">
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M7.775 3.275a.75.75 0 0 0 1.06 1.06l1.25-1.25a2 2 0 1 1 2.83 2.83l-2.5 2.5a2 2 0 0 1-2.83 0 .75.75 0 0 0-1.06 1.06 3.5 3.5 0 0 0 4.95 0l2.5-2.5a3.5 3.5 0 0 0-4.95-4.95l-1.25 1.25Zm-4.69 9.64a2 2 0 0 1 0-2.83l2.5-2.5a2 2 0 0 1 2.83 0 .75.75 0 0 0 1.06-1.06 3.5 3.5 0 0 0-4.95 0l-2.5 2.5a3.5 3.5 0 0 0 4.95 4.95l1.25-1.25a.75.75 0 0 0-1.06-1.06l-1.25 1.25a2 2 0 0 1-2.83 0Z"/></svg>
+    <span class="hide-sm">Share</span>
   </button>
   <div class="pdf-wrap when-loaded">
     <button class="btn" id="pdfBtn" aria-haspopup="true" aria-expanded="false" title="Download as PDF">
@@ -102,7 +106,7 @@
         <button class="btn big" id="openFilesBtn">Open files</button>
       </div>
       <button class="btn hidden" id="reopenBtn"></button>
-      <p class="fine">Or drop files anywhere on this page. They stay on your computer. Nothing is uploaded.</p>
+      <p class="fine">Or drop files anywhere on this page. They stay on your computer unless you choose to share a link.</p>
       <p id="fileTip" class="hidden">To open <code>.md</code> files straight from your computer in Chrome, turn on “Allow access to file URLs”.<button class="btn" id="fileTipBtn">Open settings</button></p>
     </div>
     <div class="hero-art" aria-hidden="true">
@@ -140,7 +144,7 @@
         <li><b>Search everything</b>Search across every file at once, with matches highlighted on the page.</li>
         <li><b>Diagrams and code</b>Tables, task lists, callouts, images, code highlighting and Mermaid diagrams.</li>
         <li><b>Markdown to PDF</b>Save one page, or the whole folder as one PDF with a contents page.</li>
-        <li><b>Private by design</b>Files are read in your browser. Nothing is uploaded, and there is no account.</li>
+        <li><b>Private by design</b>Files are read in your browser and stay on your computer. They are uploaded only if you create a share link, which needs a Google sign-in.</li>
       </ul>
     </section>
 
@@ -156,7 +160,7 @@
     <section class="faq">
       <h2>Questions</h2>
       <details><summary>What is an .md file?</summary><p>A Markdown file: plain text with simple marks for headings, lists, links and tables. README files, notes apps like Obsidian, and many project plans and docs use it.</p></details>
-      <details><summary>Are my files uploaded?</summary><p>No. Your browser reads them on your own computer. Nothing is sent anywhere, so it is safe for private documents.</p></details>
+      <details><summary>Are my files uploaded?</summary><p>Not unless you choose to. Your browser reads them on your own computer. If you click <b>Share</b> and create a link, the Markdown text of that folder is uploaded so others can open it. You can restrict it to people you add, and remove the link at any time.</p></details>
       <details><summary>How do review comments work?</summary><p>Select text and click <b>Comment</b>. When you are done, click <b>Download review</b> and send that one file back. The owner opens it with <b>Open review files</b> and sees every comment in place.</p></details>
       <details><summary>Which Markdown does it support?</summary><p>GitHub-style Markdown: tables, task lists, fenced code with highlighting, <code>&gt; [!NOTE]</code> callouts, front matter, images, Mermaid diagrams and <code>[[wiki links]]</code>. Also <code>.markdown</code>, <code>.mdx</code> and <code>.txt</code> files.</p></details>
       <details><summary>Can I convert Markdown to PDF?</summary><p>Yes. Click <b>PDF</b>, then choose “Save as PDF” in the print window. Links between documents still work inside the PDF.</p></details>
@@ -218,6 +222,56 @@
   <div class="cmt-list" id="cmtList"></div>
 </aside>
 <button class="cmt-float hidden" id="cmtFloat"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M1 2.75C1 1.784 1.784 1 2.75 1h10.5c.966 0 1.75.784 1.75 1.75v7.5A1.75 1.75 0 0 1 13.25 12H9.06l-2.573 2.573A1.458 1.458 0 0 1 4 13.543V12H2.75A1.75 1.75 0 0 1 1 10.25Z"/></svg> Comment</button>
+<div class="modal hidden" id="shareModal" role="dialog" aria-modal="true" aria-labelledby="shTitle">
+  <div class="modal-box">
+    <h3 id="shTitle">Share with a link</h3>
+    <div id="shSignin" class="hidden">
+      <p class="sh-notice">Sign in with Google to create share links and manage who can open them.</p>
+      <div class="modal-btns"><button class="btn" id="shSigninCancel">Cancel</button><button class="btn primary" id="shSigninBtn">Sign in with Google</button></div>
+    </div>
+    <div id="shForm" class="hidden">
+      <p class="sh-user" id="shUser"></p>
+      <p class="sh-notice"><b>This uploads your docs to the cloud.</b> Only the Markdown text (<span id="shCount"></span>) is sent, and only when you click Create link. Images are not included. You can remove the link at any time.</p>
+      <fieldset class="sh-access">
+        <label><input type="radio" name="shVis" value="link" checked> <b>Anyone with the link</b><small>No sign-in needed. Add a password if you like.</small></label>
+        <label><input type="radio" name="shVis" value="restricted"> <b>Only people I add</b><small>They sign in with Google using the email you add.</small></label>
+      </fieldset>
+      <label class="sh-row" id="shEmailsRow"><span>Emails <small>(one per line or comma separated)</small></span><textarea id="shEmails" rows="3" placeholder="priya@company.com"></textarea></label>
+      <label class="sh-row" id="shPwRow"><span>Password <small>(optional)</small></span><input type="password" id="shPw" maxlength="200" autocomplete="new-password" placeholder="Leave empty for no password"></label>
+      <label class="sh-row"><span>Keep the link for</span><select id="shDays"><option value="1">1 day</option><option value="7">7 days</option><option value="30" selected>30 days</option></select></label>
+      <p class="sh-err hidden" id="shErr"></p>
+      <div class="modal-btns"><button class="btn" id="shCancel">Cancel</button><button class="btn primary" id="shCreate">Create link</button></div>
+    </div>
+    <div id="shDone" class="hidden">
+      <p class="sh-notice">Your link is ready<span id="shDoneMeta"></span>.</p>
+      <div class="sh-link"><input id="shUrl" readonly><button class="btn primary" id="shCopy">Copy</button></div>
+      <div class="modal-btns"><button class="btn" id="shClose">Done</button></div>
+    </div>
+    <div id="shWeb" class="hidden">
+      <p class="sh-notice">Sharing works on the website version. Open the viewer on the website, open your folder there, and click Share.</p>
+      <div class="modal-btns"><button class="btn" id="shWebClose">Close</button><a class="btn primary" id="shWebGo" href="https://markdown-viewer-online.vercel.app/" target="_blank" rel="noopener">Open the website</a></div>
+    </div>
+    <div id="shMine" class="hidden">
+      <h4>Your shared links</h4>
+      <div id="shMineList"></div>
+    </div>
+  </div>
+</div>
+<div class="modal hidden" id="authModal" role="dialog" aria-modal="true" aria-labelledby="auTitle">
+  <div class="modal-box">
+    <h3 id="auTitle">Sign in to open this doc</h3>
+    <p id="auMsg">The owner shared this doc with specific people. Sign in with Google to continue.</p>
+    <div class="modal-btns"><button class="btn primary" id="auBtn">Sign in with Google</button></div>
+  </div>
+</div>
+<div class="modal hidden" id="pwModal" role="dialog" aria-modal="true" aria-labelledby="pwTitle">
+  <form class="modal-box" id="pwForm">
+    <h3 id="pwTitle">This link is password protected</h3>
+    <label class="sh-row"><span>Password</span><input type="password" id="pwInput" maxlength="200" autocomplete="off" autofocus></label>
+    <p class="sh-err hidden" id="pwErr"></p>
+    <div class="modal-btns"><button class="btn primary" type="submit">Open</button></div>
+  </form>
+</div>
 <div class="modal hidden" id="leaveModal" role="dialog" aria-modal="true" aria-labelledby="lmTitle">
   <div class="modal-box">
     <h3 id="lmTitle">Download your review first?</h3>
@@ -240,5 +294,6 @@
 
 <script defer src="viewer.js"></script>
 <script defer src="review.js"></script>
+<script defer src="share.js"></script>
 </body>
 </html>
