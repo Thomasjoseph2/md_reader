@@ -572,6 +572,6 @@ body.editing-blocks #doc > [data-line]:hover { box-shadow: 0 0 0 2px var(--accen
 
 .blk-visual td, .blk-visual th { min-height: 1.6em; height: 2em; }
 
-body.shared-view #editBtn, body.editing #editBtn { display: none !important; }
+body.shared-view:not(.can-edit) #editBtn, body.editing #editBtn { display: none !important; }
 .tree-rename { flex: 1; min-width: 0; height: 22px; padding: 0 6px; border: 1px solid var(--accent); border-radius: 4px; background: var(--bg); color: var(--text); font: inherit; font-size: 13px; }
 @media print { #editBtn { display: none !important; } }

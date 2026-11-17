@@ -51,11 +51,11 @@ const docs = {
   },
   async get(id) {
     const r = await q(
-      `select id, owner_id, title, files, password_hash, visibility, role, allow_export, expires_at, failed_attempts, locked_until,
+      `select id, owner_id, title, files, password_hash, visibility, role, allow_export, version, expires_at, failed_attempts, locked_until,
               array(select email from doc_access where doc_id = shared_docs.id order by email) as emails
          from shared_docs where id = $1 and expires_at > now()`, [id]);
     const x = r.rows[0];
-    return x && { id: x.id, ownerId: x.owner_id, title: x.title, files: x.files, passwordHash: x.password_hash, visibility: x.visibility, role: x.role, allowExport: x.allow_export,
+    return x && { id: x.id, ownerId: x.owner_id, title: x.title, files: x.files, passwordHash: x.password_hash, visibility: x.visibility, role: x.role, allowExport: x.allow_export, version: x.version,
       emails: x.emails, expiresAt: x.expires_at, failedAttempts: x.failed_attempts, lockedUntil: x.locked_until };
   },
   async listByOwner(ownerId) {
@@ -77,6 +77,23 @@ const docs = {
       for (const email of emails) await c.query('insert into doc_access (doc_id, email) values ($1, $2) on conflict do nothing', [id, email]);
       await c.query('commit');
       return true;
+    } catch (e) { await c.query('rollback'); throw e; } finally { c.release(); }
+  },
+  // Saves a new version unless someone else saved first (baseVersion is the version the editor opened).
+  async save(id, { files, fileCount, sizeBytes, baseVersion, userId }) {
+    const c = await db().connect();
+    try {
+      await c.query('begin');
+      const cur = (await c.query('select version, files from shared_docs where id = $1 and expires_at > now() for update', [id])).rows[0];
+      if (!cur) { await c.query('rollback'); return { conflict: true, version: 0, files: {} }; }
+      if (cur.version !== baseVersion) { await c.query('rollback'); return { conflict: true, version: cur.version, files: cur.files }; }
+      await c.query('insert into doc_versions (doc_id, version, files, saved_by) values ($1,$2,$3,$4) on conflict do nothing', [id, cur.version, JSON.stringify(cur.files), userId]);
+      const next = cur.version + 1;
+      await c.query('update shared_docs set files = $2, file_count = $3, size_bytes = $4, version = $5, updated_at = now(), updated_by = $6 where id = $1',
+        [id, JSON.stringify(files), fileCount, sizeBytes, next, userId]);
+      await c.query('delete from doc_versions where doc_id = $1 and version <= $2', [id, next - 6]);   // keep the last 5 old versions
+      await c.query('commit');
+      return { version: next };
     } catch (e) { await c.query('rollback'); throw e; } finally { c.release(); }
   },
   async remove(id, ownerId) {

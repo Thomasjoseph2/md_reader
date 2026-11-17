@@ -110,7 +110,7 @@
         <label class="acc-opt"><input type="radio" name="${name}" value="link"><b>Anyone with the link</b><small>No sign-in needed</small></label>
         <label class="acc-opt"><input type="radio" name="${name}" value="restricted"><b>Only people I add</b><small>They sign in with Google</small></label>
       </div>
-      <label class="acc-field acc-role"><span>People who open it can</span><select class="role"><option value="viewer">View only</option><option value="commenter">View and comment</option></select></label>
+      <label class="acc-field acc-role"><span>People who open it can</span><select class="role"><option value="viewer">View only</option><option value="commenter">View and comment</option><option value="editor">Edit (they must sign in)</option></select></label>
       <label class="acc-check acc-export"><input type="checkbox" class="export"> Let them print and save as PDF</label>
       <label class="acc-field acc-emails"><span>Emails, one per line</span><textarea rows="3" placeholder="name@company.com"></textarea></label>
       <details class="acc-more"><summary>More options</summary>
@@ -310,7 +310,7 @@
   (async () => {
     try {
       toast('Opening shared docs…', 0);
-      let password, res;
+      let password, res, docKey = null;
       for (;;) {
         res = await api('doc', { id, password });
         if (res.status === 401 && res.data.needsLogin) {
@@ -326,18 +326,25 @@
       }
       if (!res.ok) { toast(res.data.error || 'This link does not exist or has expired.', 0); return; }
       let { title, files, expiresAt } = res.data;
-      const { isOwner, role, allowExport } = res.data;
+      const { isOwner, role, allowExport, version, canEdit } = res.data;
+      window.mdvShared = {
+        id, version, password, get encrypted() { return docKey !== null; },
+        signIn: async () => (me || (await signIn())) && true,
+        encrypt: (f) => encryptFiles(f, docKey),
+        api,
+      };
+      if (canEdit || role === 'editor') document.body.classList.add('can-edit');
       if (typeof files[ENC_FILE] === 'string') {
         toast('', 1);
         for (let wrong = false; ; wrong = true) {
           const key = await askPassword(wrong, true);
-          try { files = await decryptFiles(files[ENC_FILE], key); title = 'Encrypted docs'; break; } catch (e) { if (e.message === 'unsupported') { toast('This encrypted doc needs a newer version of the viewer.', 0); return; } }
+          try { files = await decryptFiles(files[ENC_FILE], key); docKey = key; title = 'Encrypted docs'; break; } catch (e) { if (e.message === 'unsupported') { toast('This encrypted doc needs a newer version of the viewer.', 0); return; } }
         }
       }
       document.body.classList.add('shared-view');
-      if (!isOwner) document.body.classList.add('reader', ...(role === 'commenter' ? [] : ['no-comment']), ...(allowExport ? [] : ['no-export']));
+      if (!isOwner) document.body.classList.add('reader', ...(role === 'viewer' ? ['no-comment'] : []), ...(allowExport ? [] : ['no-export']));
       await load(Object.entries(files).map(([path, text]) => ({ path, file: new File([text], path.slice(path.lastIndexOf('/') + 1), { type: 'text/markdown' }) })), title);
-      const note = h('span', { className: 'shared-note hide-sm', textContent: `Shared with you · ${isOwner ? 'owner view' : role === 'commenter' ? 'can comment' : 'view only'} · expires ${fmtDate(expiresAt)}` });
+      const note = h('span', { className: 'shared-note hide-sm', textContent: `Shared with you · ${isOwner ? 'owner view' : role === 'editor' ? 'can edit' : role === 'commenter' ? 'can comment' : 'view only'} · expires ${fmtDate(expiresAt)}` });
       $('#rootName').after(note);
     } catch {
       toast('Could not open this link. Check your connection and try again.', 0);

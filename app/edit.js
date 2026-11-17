@@ -39,10 +39,11 @@
   /* ---------- edit: click a block on the page (the rest of the file is never touched) ---------- */
   async function startEdit() {
     if (editing || !state.current) return;
-    const path = state.current, real = await askWrite();
-    editing = { path, real, original: state.texts.get(path), draft: state.texts.get(path), stale: false, file: state.files.get(path), source: false, open: null };
-    q.banner.className = 'edit-banner ' + (real ? 'real' : 'copy');
-    q.banner.textContent = real
+    const cloud = !!window.mdvShared && document.body.classList.contains('shared-view');
+    const path = state.current, real = cloud ? false : await askWrite();
+    editing = { cloud, path, real, original: state.texts.get(path), draft: state.texts.get(path), stale: false, file: state.files.get(path), source: false, open: null };
+    q.banner.className = 'edit-banner ' + (real || cloud ? 'real' : 'copy');
+    q.banner.textContent = cloud ? 'You are editing the shared doc. Save updates it for everyone who opens this link.' : real
       ? `You are editing the real file on your computer: ${state.root}/${path}. Save writes to it.`
       : 'You are editing a copy in this tab. Save downloads the edited file; your original is not changed.';
     q.status.textContent = '';
@@ -201,6 +202,11 @@
     await settle();
     const { path } = editing, text = current(), name = baseName(path);
     q.save.disabled = true;
+    if (editing.cloud) {
+      try { if (await cloudSave(path, text)) { state.files.set(path, new File([text], name, { type: 'text/markdown' })); stopEdit(); await reloadAll(true); toast('Saved for everyone with access'); } }
+      catch (err) { q.status.textContent = 'Could not save: ' + (err.message || err.name); }
+      q.save.disabled = false; return;
+    }
     try {
       let lastModified = Date.now();
       if (editing.real) {
@@ -220,6 +226,23 @@
     } catch (e) {
       q.status.textContent = 'Could not save: ' + (e.message || e.name);
     } finally { q.save.disabled = false; }
+  }
+  // Saves the whole shared doc as a new version. Returns true when saved.
+  async function cloudSave(path, text, retried) {
+    const S = window.mdvShared;
+    const files = Object.fromEntries(state.texts); files[path] = text;
+    const body = { id: S.id, password: S.password, files: S.encrypted ? await S.encrypt(files) : files, baseVersion: S.version };
+    const r = await S.api('save', body);
+    if (r.ok) { S.version = r.data.version; return true; }
+    if (r.status === 401 && r.data.needsLogin && !retried) {
+      if (await S.signIn()) return cloudSave(path, text, true);
+      q.status.textContent = 'Sign in to save your changes.'; return false;
+    }
+    if (r.status === 409) {
+      if (confirm('Someone else saved a newer version while you were editing.\n\nOK = replace their version with yours (theirs is kept in the doc history).\nCancel = keep editing, and copy your text first.')) { S.version = r.data.version; return cloudSave(path, text, retried); }
+      q.status.textContent = 'Not saved: someone else changed this doc. Copy your text, then reload to see their version.'; return false;
+    }
+    q.status.textContent = r.data.error || 'Could not save.'; return false;
   }
   async function cancel() {
     await settle();
