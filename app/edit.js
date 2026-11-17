@@ -16,11 +16,6 @@
     <p class="edit-hint" id="edHint">Click any paragraph, heading, list, table or code block and change it right on the page. Clear a block to delete it.</p>
     <textarea id="edText" class="hidden" spellcheck="false" aria-label="Edit Markdown"></textarea>`;
   $('#doc').before(editor);
-  const rename = document.createElement('form');
-  rename.id = 'renameRow'; rename.className = 'rename-row hidden';
-  rename.innerHTML = `<input id="rnInput" maxlength="150" aria-label="New file name" autocomplete="off"><button class="btn primary" type="submit">Rename</button><button class="btn" type="button" id="rnCancel">Cancel</button><span id="rnErr" class="rn-err"></span>`;
-  $('#docActions').after(rename);
-
   const q = { text: $('#edText'), banner: $('#edBanner'), status: $('#edStatus'), save: $('#edSave'), mode: $('#edMode'), hint: $('#edHint'), add: $('#edAdd') };
   const current = () => (editing.source ? q.text.value : editing.draft);
   const dirty = () => editing && current() !== editing.original;
@@ -233,23 +228,13 @@
     stopEdit(); state.texts.set(path, original); await render(path, '', true);
   }
 
-  /* ---------- rename ---------- */
-  const rnErr = (m) => { $('#rnErr').textContent = m || ''; };
-  function startRename() {
-    if (!state.current || editing) return;
-    $('#rnInput').value = baseName(state.current); rnErr('');
-    rename.classList.remove('hidden'); $('#docActions').classList.add('hidden');
-    $('#rnInput').focus(); $('#rnInput').setSelectionRange(0, baseName(state.current).replace(MD_RE, '').length);
-  }
-  function stopRename() { rename.classList.add('hidden'); $('#docActions').classList.remove('hidden'); }
-  rename.onsubmit = async (e) => {
-    e.preventDefault();
-    const old = state.current, name = $('#rnInput').value.trim();
-    if (name === baseName(old)) return stopRename();
-    if (!name || /[\\/:*?"<>|]/.test(name) || name.startsWith('.')) return rnErr('Use a plain file name, without / \\ : * ? " < > |');
-    if (!MD_RE.test(name)) return rnErr('Keep the .md ending.');
+  /* ---------- rename: double-click a file in the list ---------- */
+  // Returns an error message, or '' when it worked.
+  async function renameFile(old, name) {
+    if (!name || /[\\/:*?"<>|]/.test(name) || name.startsWith('.')) return 'Use a plain file name, without / \\ : * ? " < > |';
+    if (!MD_RE.test(name)) return 'Keep the file ending, like .md';
     const next = dirOf(old) + name;
-    if (state.files.has(next)) return rnErr('A file with that name already exists here.');
+    if (state.files.has(next)) return 'A file with that name already exists here.';
     try {
       let file = state.files.get(old), real = false;
       if (await askWrite()) {
@@ -262,21 +247,46 @@
         }
         file = await (await dir.getFileHandle(name)).getFile(); real = true;
       } else file = new File([state.texts.get(old)], name, { type: 'text/markdown', lastModified: file.lastModified });
+      const wasCurrent = state.current === old;
       state.files.delete(old); state.files.set(next, file);
-      stopRename();
-      state.current = next; await reloadAll(true); setHash(next);
+      if (wasCurrent) state.current = next;
+      await reloadAll(true);
+      if (wasCurrent) setHash(next);
       toast(real ? 'Renamed on your computer. Links in other files that use the old name are not changed.' : 'Renamed in this tab only. Your original file is not changed.', 4500);
-    } catch (err) { rnErr('Could not rename: ' + (err.message || err.name)); }
-  };
+      return '';
+    } catch (err) { return 'Could not rename: ' + (err.message || err.name); }
+  }
+  function renameInline(link) {
+    if (document.body.classList.contains('shared-view') || link.querySelector('input')) return;
+    const path = link.dataset.path;
+    if (editing && editing.path === path) { toast('Save or cancel your edit first, then rename.'); return; }
+    const label = link.querySelector('span'), input = Object.assign(document.createElement('input'), { className: 'tree-rename', value: baseName(path), maxLength: 150 });
+    input.setAttribute('aria-label', 'File name');
+    label.hidden = true; label.after(input); input.focus();
+    input.setSelectionRange(0, baseName(path).replace(MD_RE, '').length);
+    let done = false;
+    const end = async (commit) => {
+      if (done) return; done = true;
+      const name = input.value.trim();
+      input.remove(); label.hidden = false;
+      if (!commit || !name || name === baseName(path)) return;
+      const err = await renameFile(path, name);
+      if (err) toast(err, 4500);
+    };
+    input.onkeydown = (e) => { e.stopPropagation(); if (e.key === 'Enter') { e.preventDefault(); end(true); } else if (e.key === 'Escape') { e.preventDefault(); end(false); } };
+    input.onclick = (e) => { e.preventDefault(); e.stopPropagation(); };
+    input.onblur = () => end(true);
+  }
+  $('#tree').addEventListener('dblclick', (e) => {
+    const link = e.target.closest('a[data-path]');
+    if (link) { e.preventDefault(); renameInline(link); }
+  });
 
   /* ---------- wiring ---------- */
   $('#editBtn').onclick = startEdit;
-  $('#renameBtn').onclick = startRename;
-  $('#rnCancel').onclick = stopRename;
   q.save.onclick = save; $('#edCancel').onclick = cancel;
   addEventListener('keydown', (e) => {
     if (editing && (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); save(); }
-    if (e.key === 'Escape' && !rename.classList.contains('hidden')) stopRename();
   });
   addEventListener('beforeunload', (e) => { if (dirty()) { e.preventDefault(); e.returnValue = ''; } });
   // Leaving the file (another file, a link, the file list) with unsaved edits: Save and leave / Discard / Stay.
