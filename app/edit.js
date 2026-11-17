@@ -100,7 +100,7 @@
     }
     const copy = host.cloneNode(true);
     copy.querySelectorAll('td br, th br').forEach((b) => b.remove());          // a line break inside a table cell would break the table
-    return td.turndown(copy.innerHTML).replace(/\n{3,}/g, '\n\n');
+    return td.turndown(copy.innerHTML).replace(/\n{3,}/g, '\n\n').replace(/^(\s*(?:[-*+]|\d+\.))[ \t]{2,}(?=\S)/gm, '$1 ');
   }
   function toolbar(host, hasTable, hasCode) {
     const bar = document.createElement('div'); bar.className = 'blk-bar';
