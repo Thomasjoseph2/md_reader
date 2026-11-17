@@ -19,7 +19,7 @@
 <link rel="icon" href="icons/32.png">
 <link rel="apple-touch-icon" href="icons/128.png">
 <link rel="stylesheet" href="fonts.css">
-<link rel="stylesheet" href="viewer.css?v=perm1">
+<link rel="stylesheet" href="viewer.css?v=edit1">
 <link rel="stylesheet" href="lib/hljs-themes.css">
 <script defer src="lib/marked.min.js"></script>
 <script defer src="lib/purify.min.js"></script>
@@ -202,6 +202,7 @@
     <div class="doc-wrap">
       <nav class="crumbs" id="crumbs"></nav>
       <div class="meta" id="meta"></div>
+      <div class="doc-actions" id="docActions"><button class="btn" id="editBtn" title="Edit this file">Edit</button><button class="btn" id="renameBtn" title="Rename this file">Rename</button></div>
       <article class="md" id="doc"></article>
       <nav class="pager" id="pager"></nav>
     </div>
@@ -309,6 +310,7 @@
 <input type="file" id="fileInput" multiple accept=".md,.markdown,.mdx,.txt,image/*" hidden>
 
 <script defer src="viewer.js?v=perm1"></script>
+<script defer src="edit.js?v=edit1"></script>
 <script defer src="review.js"></script>
 <script defer src="share.js?v=perm1"></script>
 </body>
