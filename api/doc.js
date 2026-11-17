@@ -15,7 +15,7 @@ module.exports = async (req, res) => {
     const doc = await repo.docs.get(id);
     if (!doc) return gone();
     const user = await currentUser(req);
-    const out = () => L.send(res, 200, { title: doc.title, files: doc.files, expiresAt: doc.expiresAt, isOwner: !!user && user.id === doc.ownerId });
+    const out = () => L.send(res, 200, { title: doc.title, files: doc.files, expiresAt: doc.expiresAt, isOwner: !!user && user.id === doc.ownerId, role: doc.role, allowExport: doc.allowExport });
 
     if (user && user.id === doc.ownerId) return out();
 

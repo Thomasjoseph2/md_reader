@@ -110,6 +110,8 @@
         <label class="acc-opt"><input type="radio" name="${name}" value="link"><b>Anyone with the link</b><small>No sign-in needed</small></label>
         <label class="acc-opt"><input type="radio" name="${name}" value="restricted"><b>Only people I add</b><small>They sign in with Google</small></label>
       </div>
+      <label class="acc-field acc-role"><span>People who open it can</span><select class="role"><option value="viewer">View only</option><option value="commenter">View and comment</option></select></label>
+      <label class="acc-check acc-export"><input type="checkbox" class="export"> Let them print and save as PDF</label>
       <label class="acc-field acc-emails"><span>Emails, one per line</span><textarea rows="3" placeholder="name@company.com"></textarea></label>
       <details class="acc-more"><summary>More options</summary>
         <label class="acc-field acc-pw"><span>Password</span><input type="password" maxlength="200" autocomplete="new-password"></label>
@@ -117,6 +119,7 @@
         <label class="acc-field acc-days"><span>Keep the link for</span><select><option value="1">1 day</option><option value="7">7 days</option><option value="30">30 days</option></select></label>
       </details>`;
     const q = (s) => root.querySelector(s);
+    const roleSel = q('.role'), exportBox = q('.export'); roleSel.value = init.role || 'viewer'; exportBox.checked = !!init.allowExport;
     const emails = q('textarea'), pw = q('.acc-pw input'), rm = q('.acc-rm input'), days = q('select'), more = q('.acc-more');
     root.querySelector(`input[value="${vis}"]`).checked = true;
     emails.value = (init.emails || []).join('\n');
@@ -135,7 +138,7 @@
     return {
       el: root,
       focus() { (current() === 'restricted' ? emails : root.querySelector('input[type=radio]:checked')).focus(); },
-      values: () => ({ visibility: current(), emails: emails.value.split(/[\s,;]+/).filter(Boolean), password: pw.value || undefined, removePassword: rm.checked, days: +days.value }),
+      values: () => ({ visibility: current(), emails: emails.value.split(/[\s,;]+/).filter(Boolean), password: pw.value || undefined, removePassword: rm.checked, days: +days.value, role: roleSel.value, allowExport: exportBox.checked }),
     };
   }
 
@@ -179,7 +182,7 @@
       }
       const { ok, status, data } = await api('share', {
         title, files, visibility: v.visibility, emails: v.emails,
-        password: v.visibility === 'link' ? v.password : undefined, days: v.days,
+        password: v.visibility === 'link' ? v.password : undefined, days: v.days, role: v.role, allowExport: v.allowExport,
       });
       if (status === 401) { me = null; updateProfile(); return only('#shSignin'); }
       if (!ok) throw new Error(data.error || 'Could not create the link.');
@@ -242,13 +245,13 @@
     let editor = null;
     function toggleEdit() {
       if (editor) { editor.remove(); editor = null; return; }
-      const acc = buildAccess({ visibility: m.visibility, emails: m.emails, protected: m.protected });
+      const acc = buildAccess({ visibility: m.visibility, emails: m.emails, protected: m.protected, role: m.role, allowExport: m.allowExport });
       const err = h('p', { className: 'sh-err hidden' });
       const save = h('button', { className: 'btn primary', textContent: 'Save' });
       const cancel = h('button', { className: 'btn', textContent: 'Cancel', onclick: () => toggleEdit() });
       save.onclick = async () => {
         const v = acc.values(); save.disabled = true; save.textContent = 'Saving…'; err.classList.add('hidden');
-        const r = await api('access', { id: m.id, visibility: v.visibility, emails: v.emails, password: v.password, removePassword: v.removePassword });
+        const r = await api('access', { id: m.id, visibility: v.visibility, emails: v.emails, password: v.password, removePassword: v.removePassword, role: v.role, allowExport: v.allowExport });
         if (r.ok) { toast('Saved'); renderLinks(); }
         else { err.textContent = r.data.error || 'Could not save.'; err.classList.remove('hidden'); save.disabled = false; save.textContent = 'Save'; }
       };
@@ -323,6 +326,7 @@
       }
       if (!res.ok) { toast(res.data.error || 'This link does not exist or has expired.', 0); return; }
       let { title, files, expiresAt } = res.data;
+      const { isOwner, role, allowExport } = res.data;
       if (typeof files[ENC_FILE] === 'string') {
         toast('', 1);
         for (let wrong = false; ; wrong = true) {
@@ -331,8 +335,9 @@
         }
       }
       document.body.classList.add('shared-view');
+      if (!isOwner) document.body.classList.add('reader', ...(role === 'commenter' ? [] : ['no-comment']), ...(allowExport ? [] : ['no-export']));
       await load(Object.entries(files).map(([path, text]) => ({ path, file: new File([text], path.slice(path.lastIndexOf('/') + 1), { type: 'text/markdown' }) })), title);
-      const note = h('span', { className: 'shared-note hide-sm', textContent: `Shared with you · read-only · expires ${fmtDate(expiresAt)}` });
+      const note = h('span', { className: 'shared-note hide-sm', textContent: `Shared with you · ${isOwner ? 'owner view' : role === 'commenter' ? 'can comment' : 'view only'} · expires ${fmtDate(expiresAt)}` });
       $('#rootName').after(note);
     } catch {
       toast('Could not open this link. Check your connection and try again.', 0);

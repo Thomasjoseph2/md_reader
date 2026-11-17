@@ -19,7 +19,8 @@ module.exports = async (req, res) => {
       if (typeof b.password !== 'string' || b.password.length > L.LIMITS.maxPassword) return L.send(res, 400, { error: 'Password is too long.' });
       passwordHash = L.hashPassword(b.password);
     }
-    const ok = await repo.docs.updateAccess(b.id, user.id, { visibility, emails: visibility === 'restricted' ? emails : [], passwordHash });
+    const role = b.role === 'commenter' ? 'commenter' : 'viewer';
+    const ok = await repo.docs.updateAccess(b.id, user.id, { role, allowExport: b.allowExport === true, visibility, emails: visibility === 'restricted' ? emails : [], passwordHash });
     ok ? L.send(res, 200, { ok: true }) : L.send(res, 404, { error: 'Link not found.' });
   } catch (e) { console.error('access failed', e.message); L.send(res, 500, { error: 'Could not update the link.' }); }
 };

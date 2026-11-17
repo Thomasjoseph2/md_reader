@@ -523,3 +523,10 @@ body.one-file .sidebar .panel-btn, body.one-file #sideOpen { display: none; }
 .key-row { display: flex; gap: 6px; margin-top: 6px; }
 .key-row input { flex: 1; min-width: 0; }
 .key-row .btn { flex: none; }
+
+/* What people who open a shared link may do (the owner chooses) */
+body.reader #shareBtn { display: none !important; }
+body.no-comment #cmtBtn, body.no-comment .cmt-panel, body.no-comment .cmt-float, body.no-comment .cmt-badge { display: none !important; }
+body.no-export .menu-wrap:has(#pdfBtn) { display: none !important; }
+@media print { body.no-export > * { display: none !important; } body.no-export::before { content: "Printing is turned off for this shared doc."; display: block; padding: 40px; font: 16px sans-serif; } }
+.acc-role select { width: 100%; }

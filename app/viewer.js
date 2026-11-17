@@ -68,7 +68,7 @@ async function goHome() {
   for (const k of ['tree', 'doc', 'toc', 'pager', 'crumbs', 'meta']) el[k].replaceChildren();
   el.search.value = ''; el.rootName.textContent = '';
   document.querySelector('.shared-note')?.remove();
-  document.body.classList.remove('loaded', 'one-file', 'nav-open', 'shared-view');
+  document.body.classList.remove('loaded', 'one-file', 'nav-open', 'shared-view', 'reader', 'no-comment', 'no-export');
   homeHooks.forEach((f) => f());
   document.title = HOME_TITLE;
   history.replaceState(null, '', location.pathname);   // drops ?s=… and #/file

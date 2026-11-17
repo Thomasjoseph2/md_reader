@@ -41,9 +41,9 @@ const docs = {
     try {
       await c.query('begin');
       const r = await c.query(
-        `insert into shared_docs (id, owner_id, title, files, file_count, size_bytes, password_hash, visibility, expires_at)
-         values ($1,$2,$3,$4,$5,$6,$7,$8, now() + make_interval(days => $9)) returning expires_at`,
-        [d.id, d.ownerId, d.title, JSON.stringify(d.files), d.fileCount, d.sizeBytes, d.passwordHash, d.visibility, d.days]);
+        `insert into shared_docs (id, owner_id, title, files, file_count, size_bytes, password_hash, visibility, role, allow_export, expires_at)
+         values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10, now() + make_interval(days => $11)) returning expires_at`,
+        [d.id, d.ownerId, d.title, JSON.stringify(d.files), d.fileCount, d.sizeBytes, d.passwordHash, d.visibility, d.role, d.allowExport, d.days]);
       for (const email of d.emails) await c.query('insert into doc_access (doc_id, email) values ($1, $2) on conflict do nothing', [d.id, email]);
       await c.query('commit');
       return { expiresAt: r.rows[0].expires_at };
@@ -51,25 +51,25 @@ const docs = {
   },
   async get(id) {
     const r = await q(
-      `select id, owner_id, title, files, password_hash, visibility, expires_at, failed_attempts, locked_until,
+      `select id, owner_id, title, files, password_hash, visibility, role, allow_export, expires_at, failed_attempts, locked_until,
               array(select email from doc_access where doc_id = shared_docs.id order by email) as emails
          from shared_docs where id = $1 and expires_at > now()`, [id]);
     const x = r.rows[0];
-    return x && { id: x.id, ownerId: x.owner_id, title: x.title, files: x.files, passwordHash: x.password_hash, visibility: x.visibility,
+    return x && { id: x.id, ownerId: x.owner_id, title: x.title, files: x.files, passwordHash: x.password_hash, visibility: x.visibility, role: x.role, allowExport: x.allow_export,
       emails: x.emails, expiresAt: x.expires_at, failedAttempts: x.failed_attempts, lockedUntil: x.locked_until };
   },
   async listByOwner(ownerId) {
     const r = await q(
-      `select id, title, file_count, visibility, password_hash is not null as protected, expires_at,
+      `select id, title, file_count, visibility, role, allow_export, password_hash is not null as protected, expires_at,
               array(select email from doc_access where doc_id = shared_docs.id order by email) as emails
          from shared_docs where owner_id = $1 and expires_at > now() order by created_at desc limit 100`, [ownerId]);
-    return r.rows.map((x) => ({ id: x.id, title: x.title, fileCount: x.file_count, visibility: x.visibility, protected: x.protected, emails: x.emails, expiresAt: x.expires_at }));
+    return r.rows.map((x) => ({ id: x.id, title: x.title, fileCount: x.file_count, visibility: x.visibility, role: x.role, allowExport: x.allow_export, protected: x.protected, emails: x.emails, expiresAt: x.expires_at }));
   },
-  async updateAccess(id, ownerId, { visibility, emails, passwordHash }) {
+  async updateAccess(id, ownerId, { visibility, emails, passwordHash, role, allowExport }) {
     const c = await db().connect();
     try {
       await c.query('begin');
-      const sets = ['visibility = $3'], params = [id, ownerId, visibility];
+      const sets = ['visibility = $3', 'role = $4', 'allow_export = $5'], params = [id, ownerId, visibility, role, allowExport];
       if (passwordHash !== undefined) { params.push(passwordHash); sets.push(`password_hash = $${params.length}`, 'failed_attempts = 0', 'locked_until = null'); }
       const r = await c.query(`update shared_docs set ${sets.join(', ')} where id = $1 and owner_id = $2 and expires_at > now()`, params);
       if (!r.rowCount) { await c.query('rollback'); return false; }

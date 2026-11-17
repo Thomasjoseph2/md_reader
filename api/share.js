@@ -33,12 +33,13 @@ module.exports = async (req, res) => {
       if (typeof b.password !== 'string' || b.password.length > L.LIMITS.maxPassword) return L.send(res, 400, { error: 'Password is too long.' });
       passwordHash = L.hashPassword(b.password);
     }
+    const role = b.role === 'commenter' ? 'commenter' : 'viewer', allowExport = b.allowExport === true;
     if (await repo.docs.countRecentByOwner(user.id) >= L.LIMITS.perUserPerHour) return L.send(res, 429, { error: 'Too many links created. Try again later.' });
 
     const id = L.newId();
     const { expiresAt } = await repo.docs.create({
       id, ownerId: user.id, title: String(b.title || 'Shared docs').slice(0, 120), files, fileCount: paths.length, sizeBytes: size,
-      passwordHash, visibility, emails: visibility === 'restricted' ? emails : [], days: L.LIMITS.expiryDays.includes(b.days) ? b.days : 30,
+      passwordHash, visibility, role, allowExport, emails: visibility === 'restricted' ? emails : [], days: L.LIMITS.expiryDays.includes(b.days) ? b.days : 30,
     });
     L.send(res, 200, { id, expiresAt });
   } catch (e) {
