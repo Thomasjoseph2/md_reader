@@ -245,6 +245,11 @@
     </div>
     <div id="shForm" class="hidden">
       <div id="shAccessMount"></div>
+      <label class="acc-check" id="shEncRow"><input type="checkbox" id="shEnc"> Encrypt with a secret key</label>
+      <div id="shEncBox" class="hidden">
+        <label class="acc-field"><span>Secret key (8+ characters)</span><input type="password" id="shKey" maxlength="200" autocomplete="new-password"></label>
+        <p class="sh-note">Your files are locked in this browser before they upload, so the server only stores scrambled data and never sees the key. Send the key to your reader separately, not in the same message as the link. <b>If you lose the key, nobody can open the doc.</b> Search and previews on the server won't work for encrypted docs.</p>
+      </div>
       <p class="sh-note" id="shNote"></p>
       <p class="sh-err hidden" id="shErr"></p>
       <div class="modal-btns"><button class="btn" id="shCancel">Cancel</button><button class="btn primary" id="shCreate">Create link</button></div>
@@ -277,7 +282,8 @@
 <div class="modal hidden" id="pwModal" role="dialog" aria-modal="true" aria-labelledby="pwTitle">
   <form class="modal-box" id="pwForm">
     <h3 id="pwTitle">This link is password protected</h3>
-    <label class="sh-row"><span>Password</span><input type="password" id="pwInput" maxlength="200" autocomplete="off" autofocus></label>
+    <p class="sh-note hidden" id="pwHint"></p>
+    <label class="sh-row"><span id="pwLabel">Password</span><input type="password" id="pwInput" maxlength="200" autocomplete="off" autofocus></label>
     <p class="sh-err hidden" id="pwErr"></p>
     <div class="modal-btns"><button class="btn primary" type="submit">Open</button></div>
   </form>
@@ -300,8 +306,8 @@
 <input type="file" id="dirInput" webkitdirectory directory multiple hidden>
 <input type="file" id="fileInput" multiple accept=".md,.markdown,.mdx,.txt,image/*" hidden>
 
-<script defer src="viewer.js?v=panels2"></script>
+<script defer src="viewer.js?v=enc1"></script>
 <script defer src="review.js"></script>
-<script defer src="share.js"></script>
+<script defer src="share.js?v=enc1"></script>
 </body>
 </html>

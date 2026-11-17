@@ -22,6 +22,28 @@
   };
   let me = null;
 
+  /* ---------- optional end-to-end encryption (the key never leaves the browser) ---------- */
+  const ENC_FILE = '_encrypted.json', ITER = 600000;
+  const b64 = (buf) => { let s = ''; for (const c of new Uint8Array(buf)) s += String.fromCharCode(c); return btoa(s); };
+  const unb64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+  async function deriveKey(pass, salt, iter) {
+    const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(pass), 'PBKDF2', false, ['deriveKey']);
+    return crypto.subtle.deriveKey({ name: 'PBKDF2', salt, iterations: iter, hash: 'SHA-256' }, base, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+  }
+  async function encryptFiles(files, pass) {
+    const salt = crypto.getRandomValues(new Uint8Array(16)), iv = crypto.getRandomValues(new Uint8Array(12));
+    const key = await deriveKey(pass, salt, ITER);
+    const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, new TextEncoder().encode(JSON.stringify(files)));
+    return { [ENC_FILE]: JSON.stringify({ v: 1, kdf: 'PBKDF2-SHA256', iter: ITER, salt: b64(salt), iv: b64(iv), ct: b64(ct) }) };
+  }
+  async function decryptFiles(blob, pass) {                   // throws when the key is wrong
+    const e = JSON.parse(blob);
+    if (e.v !== 1 || !(e.iter >= 1000 && e.iter <= 2000000)) throw new Error('unsupported');
+    const key = await deriveKey(pass, unb64(e.salt), e.iter);
+    const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: unb64(e.iv) }, key, unb64(e.ct));
+    return JSON.parse(new TextDecoder().decode(pt));
+  }
+
   /* ---------- who is signed in ---------- */
   const personIcon = onWeb ? $('#profileBtn').innerHTML : '';
   async function whoAmI() { try { me = (await api('auth/me')).data.user || null; } catch { me = null; } updateProfile(); return me; }
@@ -138,6 +160,7 @@
     $('#shAccessMount').replaceChildren(access.el);
     $('#shNote').textContent = `Uploads the text of ${n} file${n === 1 ? '' : 's'} (${size}) to the cloud. Images are not included. You can remove the link any time.`;
     show('#shErr', false);
+    $('#shEnc').checked = false; $('#shKey').value = ''; show('#shEncBox', false);
     $('#shCreate').disabled = false; $('#shCreate').textContent = 'Create link';
     only('#shForm');
   }
@@ -146,8 +169,16 @@
     const btn = $('#shCreate'); btn.disabled = true; btn.textContent = 'Uploading…'; show('#shErr', false);
     try {
       const v = access.values();
+      let files = Object.fromEntries(state.texts), title = state.root;
+      if ($('#shEnc').checked) {
+        const key = $('#shKey').value;
+        if (key.length < 8) throw new Error('Use a secret key of at least 8 characters.');
+        btn.textContent = 'Encrypting…';
+        files = await encryptFiles(files, key); title = 'Encrypted docs';
+        btn.textContent = 'Uploading…';
+      }
       const { ok, status, data } = await api('share', {
-        title: state.root, files: Object.fromEntries(state.texts), visibility: v.visibility, emails: v.emails,
+        title, files, visibility: v.visibility, emails: v.emails,
         password: v.visibility === 'link' ? v.password : undefined, days: v.days,
       });
       if (status === 401) { me = null; updateProfile(); return only('#shSignin'); }
@@ -155,8 +186,9 @@
       const url = linkBase + data.id;
       $('#shUrl').value = url;
       const who = v.visibility === 'restricted' ? `${v.emails.length} ${v.emails.length === 1 ? 'person' : 'people'} can open it` : v.password ? 'anyone with the link and the password' : 'anyone with the link';
+      const enc = $('#shEnc').checked ? ' Encrypted: send the secret key to your reader separately.' : '';
       let copied = false; try { await navigator.clipboard.writeText(url); copied = true; } catch {}
-      $('#shDoneMeta').textContent = `${copied ? 'Link copied. ' : 'Your link is ready. '}${who[0].toUpperCase() + who.slice(1)} · expires ${fmtDate(data.expiresAt)}.`;
+      $('#shDoneMeta').textContent = `${copied ? 'Link copied. ' : 'Your link is ready. '}${who[0].toUpperCase() + who.slice(1)} · expires ${fmtDate(data.expiresAt)}.${enc}`;
       only('#shDone'); $('#shUrl').select();
     } catch (e) {
       $('#shErr').textContent = e.message || 'Could not create the link.'; show('#shErr', true);
@@ -229,6 +261,7 @@
   $('#shCancel').onclick = $('#shClose').onclick = $('#shSigninCancel').onclick = $('#shWebClose').onclick = closeShare;
   $('#shSigninBtn').onclick = async () => { if (await signIn()) showForm(); };
   $('#shCreate').onclick = create;
+  $('#shEnc').onchange = () => { show('#shEncBox', $('#shEnc').checked); if ($('#shEnc').checked) $('#shKey').focus(); };
   $('#shCopy').onclick = (e) => copy($('#shUrl').value, e.currentTarget);
   $('#shManage').onclick = () => { closeShare(); openLinks(); };
   $('#linksClose').onclick = closeLinks;
@@ -248,8 +281,11 @@
   if (!id || !onWeb) return;
 
   const pwModal = $('#pwModal'), authModal = $('#authModal');
-  const askPassword = (wrong) => new Promise((resolve) => {
-    $('#pwErr').textContent = wrong ? 'Wrong password. Try again.' : ''; show('#pwErr', !!wrong);
+  const askPassword = (wrong, secret) => new Promise((resolve) => {
+    $('#pwTitle').textContent = secret ? 'This doc is encrypted' : 'This link is password protected';
+    $('#pwLabel').textContent = secret ? 'Secret key' : 'Password';
+    $('#pwHint').textContent = secret ? 'Ask the person who shared it for the key. It is checked in your browser and never sent to the server.' : ''; show('#pwHint', !!secret);
+    $('#pwErr').textContent = wrong ? (secret ? 'Wrong key. Try again.' : 'Wrong password. Try again.') : ''; show('#pwErr', !!wrong);
     $('#pwInput').value = ''; pwModal.classList.remove('hidden'); $('#pwInput').focus();
     $('#pwForm').onsubmit = (e) => { e.preventDefault(); pwModal.classList.add('hidden'); resolve($('#pwInput').value); };
   });
@@ -281,7 +317,14 @@
         break;
       }
       if (!res.ok) { toast(res.data.error || 'This link does not exist or has expired.', 0); return; }
-      const { title, files, expiresAt } = res.data;
+      let { title, files, expiresAt } = res.data;
+      if (typeof files[ENC_FILE] === 'string') {
+        toast('', 1);
+        for (let wrong = false; ; wrong = true) {
+          const key = await askPassword(wrong, true);
+          try { files = await decryptFiles(files[ENC_FILE], key); title = 'Encrypted docs'; break; } catch (e) { if (e.message === 'unsupported') { toast('This encrypted doc needs a newer version of the viewer.', 0); return; } }
+        }
+      }
       document.body.classList.add('shared-view');
       await load(Object.entries(files).map(([path, text]) => ({ path, file: new File([text], path.slice(path.lastIndexOf('/') + 1), { type: 'text/markdown' }) })), title);
       const note = h('span', { className: 'shared-note hide-sm', textContent: `Shared with you · read-only · expires ${fmtDate(expiresAt)}` });
