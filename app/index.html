@@ -19,7 +19,7 @@
 <link rel="icon" href="icons/32.png">
 <link rel="apple-touch-icon" href="icons/128.png">
 <link rel="stylesheet" href="fonts.css">
-<link rel="stylesheet" href="viewer.css?v=enc2">
+<link rel="stylesheet" href="viewer.css?v=enc3">
 <link rel="stylesheet" href="lib/hljs-themes.css">
 <script defer src="lib/marked.min.js"></script>
 <script defer src="lib/purify.min.js"></script>
@@ -247,8 +247,9 @@
       <div id="shAccessMount"></div>
       <label class="acc-check" id="shEncRow"><input type="checkbox" id="shEnc"> Encrypt with a secret key</label>
       <div id="shEncBox" class="hidden">
-        <label class="acc-field"><span>Secret key (8+ characters)</span><input type="password" id="shKey" maxlength="200" autocomplete="new-password"></label>
-        <p class="sh-note">Your files are locked in this browser before they upload, so the server only stores scrambled data and never sees the key. Send the key to your reader separately, not in the same message as the link. <b>If you lose the key, nobody can open the doc.</b> Search and previews on the server won't work for encrypted docs.</p>
+        <label class="acc-field"><span>Secret key (8+ characters)</span>
+          <span class="key-row"><input type="password" id="shKey" maxlength="200" autocomplete="new-password"><button type="button" class="btn" id="shKeyShow">Show</button><button type="button" class="btn" id="shKeyCopy">Copy key</button></span></label>
+        <p class="sh-warn" role="alert"><b>Save this key now.</b> We never store it, so if it is lost nobody can open this doc, not even us. Send it to your reader separately from the link. Search and previews on the server won't work for encrypted docs.</p>
       </div>
       <p class="sh-note" id="shNote"></p>
       <p class="sh-err hidden" id="shErr"></p>
@@ -256,6 +257,7 @@
     </div>
     <div id="shDone" class="hidden">
       <p class="sh-lead" id="shDoneMeta">Your link is ready.</p>
+      <div id="shKeyDone" class="sh-warn hidden"><b>Your secret key is not saved anywhere.</b> Copy it now and send it to your reader separately from the link. <span class="key-row"><input id="shKeyOut" readonly aria-label="Secret key"><button type="button" class="btn" id="shKeyCopy2">Copy key</button></span></div>
       <div class="sh-link"><input id="shUrl" readonly aria-label="Share link"><button class="btn primary" id="shCopy">Copy</button></div>
       <div class="modal-btns"><button class="btn" id="shManage">Your shared links</button><button class="btn" id="shClose">Done</button></div>
     </div>
@@ -308,6 +310,6 @@
 
 <script defer src="viewer.js?v=enc1"></script>
 <script defer src="review.js"></script>
-<script defer src="share.js?v=enc1"></script>
+<script defer src="share.js?v=enc3"></script>
 </body>
 </html>

@@ -160,7 +160,7 @@
     $('#shAccessMount').replaceChildren(access.el);
     $('#shNote').textContent = `Uploads the text of ${n} file${n === 1 ? '' : 's'} (${size}) to the cloud. Images are not included. You can remove the link any time.`;
     show('#shErr', false);
-    $('#shEnc').checked = false; $('#shKey').value = ''; show('#shEncBox', false);
+    $('#shEnc').checked = false; $('#shKey').value = ''; $('#shKey').type = 'password'; $('#shKeyShow').textContent = 'Show'; $('#shKeyOut').value = ''; show('#shEncBox', false);
     $('#shCreate').disabled = false; $('#shCreate').textContent = 'Create link';
     only('#shForm');
   }
@@ -186,6 +186,8 @@
       const url = linkBase + data.id;
       $('#shUrl').value = url;
       const who = v.visibility === 'restricted' ? `${v.emails.length} ${v.emails.length === 1 ? 'person' : 'people'} can open it` : v.password ? 'anyone with the link and the password' : 'anyone with the link';
+      const usedKey = $('#shEnc').checked ? $('#shKey').value : '';
+      $('#shKeyOut').value = usedKey; show('#shKeyDone', !!usedKey);
       const enc = $('#shEnc').checked ? ' Encrypted: send the secret key to your reader separately.' : '';
       let copied = false; try { await navigator.clipboard.writeText(url); copied = true; } catch {}
       $('#shDoneMeta').textContent = `${copied ? 'Link copied. ' : 'Your link is ready. '}${who[0].toUpperCase() + who.slice(1)} · expires ${fmtDate(data.expiresAt)}.${enc}`;
@@ -197,7 +199,7 @@
   }
 
   async function copy(text, btn) {
-    try { await navigator.clipboard.writeText(text); } catch { const i = $('#shUrl'); i.value = text; i.select(); document.execCommand('copy'); }
+    try { await navigator.clipboard.writeText(text); } catch { const i = h('textarea', { value: text }); document.body.append(i); i.select(); document.execCommand('copy'); i.remove(); }
     if (btn) { const o = btn.textContent; btn.textContent = 'Copied'; setTimeout(() => (btn.textContent = o), 1500); }
   }
 
@@ -261,6 +263,9 @@
   $('#shCancel').onclick = $('#shClose').onclick = $('#shSigninCancel').onclick = $('#shWebClose').onclick = closeShare;
   $('#shSigninBtn').onclick = async () => { if (await signIn()) showForm(); };
   $('#shCreate').onclick = create;
+  $('#shKeyCopy').onclick = (e) => { if ($('#shKey').value) copy($('#shKey').value, e.currentTarget); else $('#shKey').focus(); };
+  $('#shKeyCopy2').onclick = (e) => copy($('#shKeyOut').value, e.currentTarget);
+  $('#shKeyShow').onclick = (e) => { const i = $('#shKey'), s = i.type === 'password'; i.type = s ? 'text' : 'password'; e.currentTarget.textContent = s ? 'Hide' : 'Show'; };
   $('#shEnc').onchange = () => { show('#shEncBox', $('#shEnc').checked); if ($('#shEnc').checked) $('#shKey').focus(); };
   $('#shCopy').onclick = (e) => copy($('#shUrl').value, e.currentTarget);
   $('#shManage').onclick = () => { closeShare(); openLinks(); };

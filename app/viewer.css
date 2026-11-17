@@ -518,3 +518,8 @@ body.one-file .sidebar .panel-btn, body.one-file #sideOpen { display: none; }
 @media (max-width: 1200px) { #tocClose, #tocOpen { display: none !important; } }
 @media (max-width: 1000px) { .sidebar .panel-btn, #sideOpen { display: none !important; } }
 @media print { .panel-btn { display: none !important; } }
+
+.sh-warn { margin: 10px 0 14px; padding: 10px 12px; border: 1px solid #d9a441; border-radius: 8px; background: rgba(217,164,65,.14); color: var(--text); font-size: 13px; line-height: 1.5; }
+.key-row { display: flex; gap: 6px; margin-top: 6px; }
+.key-row input { flex: 1; min-width: 0; }
+.key-row .btn { flex: none; }
