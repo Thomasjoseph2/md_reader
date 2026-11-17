@@ -84,10 +84,10 @@ const docs = {
     const c = await db().connect();
     try {
       await c.query('begin');
-      const cur = (await c.query('select version, files from shared_docs where id = $1 and expires_at > now() for update', [id])).rows[0];
+      const cur = (await c.query('select version, files, updated_at, updated_by, created_at from shared_docs where id = $1 and expires_at > now() for update', [id])).rows[0];
       if (!cur) { await c.query('rollback'); return { conflict: true, version: 0, files: {} }; }
       if (cur.version !== baseVersion) { await c.query('rollback'); return { conflict: true, version: cur.version, files: cur.files }; }
-      await c.query('insert into doc_versions (doc_id, version, files, saved_by) values ($1,$2,$3,$4) on conflict do nothing', [id, cur.version, JSON.stringify(cur.files), userId]);
+      await c.query('insert into doc_versions (doc_id, version, files, saved_by, saved_at) values ($1,$2,$3,$4,$5) on conflict do nothing', [id, cur.version, JSON.stringify(cur.files), cur.updated_by, cur.updated_at || cur.created_at]);
       const next = cur.version + 1;
       await c.query('update shared_docs set files = $2, file_count = $3, size_bytes = $4, version = $5, updated_at = now(), updated_by = $6 where id = $1',
         [id, JSON.stringify(files), fileCount, sizeBytes, next, userId]);
@@ -95,6 +95,17 @@ const docs = {
       await c.query('commit');
       return { version: next };
     } catch (e) { await c.query('rollback'); throw e; } finally { c.release(); }
+  },
+  // Newest first: the current version, then the saved older ones, each with who made it and when.
+  async listVersions(id) {
+    const cur = (await q(`select s.version, coalesce(s.updated_at, s.created_at) as at, u.name, u.email from shared_docs s left join users u on u.id = coalesce(s.updated_by, s.owner_id) where s.id = $1`, [id])).rows[0];
+    if (!cur) return [];
+    const old = (await q(`select v.version, v.saved_at as at, u.name, u.email from doc_versions v join shared_docs s on s.id = v.doc_id left join users u on u.id = coalesce(v.saved_by, s.owner_id) where v.doc_id = $1 order by v.version desc`, [id])).rows;
+    return [{ ...cur, current: true }, ...old].map((x) => ({ version: x.version, savedAt: x.at, by: x.name || x.email || null, current: !!x.current }));
+  },
+  async getVersion(id, version) {
+    const r = (await q('select files from doc_versions where doc_id = $1 and version = $2', [id, version])).rows[0];
+    return r ? r.files : null;
   },
   async remove(id, ownerId) {
     return (await q('delete from shared_docs where id = $1 and owner_id = $2', [id, ownerId])).rowCount > 0;

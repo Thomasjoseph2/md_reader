@@ -227,22 +227,25 @@
       q.status.textContent = 'Could not save: ' + (e.message || e.name);
     } finally { q.save.disabled = false; }
   }
-  // Saves the whole shared doc as a new version. Returns true when saved.
-  async function cloudSave(path, text, retried) {
+  // Sends a whole new version of the shared doc. `build` makes the files to send (so a retry after a conflict re-encrypts nothing twice).
+  // Returns '' when saved, otherwise a message for the person.
+  async function push(build, retried) {
     const S = window.mdvShared;
-    const files = Object.fromEntries(state.texts); files[path] = text;
-    const body = { id: S.id, password: S.password, files: S.encrypted ? await S.encrypt(files) : files, baseVersion: S.version };
-    const r = await S.api('save', body);
-    if (r.ok) { S.version = r.data.version; return true; }
-    if (r.status === 401 && r.data.needsLogin && !retried) {
-      if (await S.signIn()) return cloudSave(path, text, true);
-      q.status.textContent = 'Sign in to save your changes.'; return false;
-    }
+    const r = await S.api('save', { id: S.id, password: S.password, files: await build(), baseVersion: S.version });
+    if (r.ok) { S.version = r.data.version; return ''; }
+    if (r.status === 401 && r.data.needsLogin && !retried) return (await S.signIn()) ? push(build, true) : 'Sign in to save your changes.';
     if (r.status === 409) {
-      if (confirm('Someone else saved a newer version while you were editing.\n\nOK = replace their version with yours (theirs is kept in the doc history).\nCancel = keep editing, and copy your text first.')) { S.version = r.data.version; return cloudSave(path, text, retried); }
-      q.status.textContent = 'Not saved: someone else changed this doc. Copy your text, then reload to see their version.'; return false;
+      if (confirm('Someone else saved a newer version while you were working.\n\nOK = replace their version with this one (theirs stays in the history).\nCancel = stop, and copy your text first.')) { S.version = r.data.version; return push(build, retried); }
+      return 'Not saved: someone else changed this doc. Copy your text, then reload to see their version.';
     }
-    q.status.textContent = r.data.error || 'Could not save.'; return false;
+    return r.data.error || 'Could not save.';
+  }
+  const sendable = (files) => async () => (window.mdvShared.encrypted ? window.mdvShared.encrypt(files) : files);
+  async function cloudSave(path, text) {
+    const files = Object.fromEntries(state.texts); files[path] = text;
+    const msg = await push(sendable(files));
+    if (msg) q.status.textContent = msg;
+    return !msg;
   }
   async function cancel() {
     await settle();
@@ -258,6 +261,16 @@
     if (!MD_RE.test(name)) return 'Keep the file ending, like .md';
     const next = dirOf(old) + name;
     if (state.files.has(next)) return 'A file with that name already exists here.';
+    if (window.mdvShared && document.body.classList.contains('shared-view')) {           // a shared doc: rename it for everyone
+      const files = {}; for (const [k, v] of state.texts) files[k === old ? next : k] = v;
+      const msg = await push(sendable(files));
+      if (msg) return msg;
+      state.files.delete(old); state.files.set(next, new File([state.texts.get(old)], name, { type: 'text/markdown' }));
+      const wasCurrent = state.current === old; if (wasCurrent) state.current = next;
+      await reloadAll(true); if (wasCurrent) setHash(next);
+      toast('Renamed for everyone with access.', 3500);
+      return '';
+    }
     try {
       let file = state.files.get(old), real = false;
       if (await askWrite()) {
@@ -280,7 +293,7 @@
     } catch (err) { return 'Could not rename: ' + (err.message || err.name); }
   }
   function renameInline(link) {
-    if (document.body.classList.contains('shared-view') || link.querySelector('input')) return;
+    if ((document.body.classList.contains('shared-view') && !document.body.classList.contains('can-edit')) || link.querySelector('input')) return;
     const path = link.dataset.path;
     if (editing && editing.path === path) { toast('Save or cancel your edit first, then rename.'); return; }
     const label = link.querySelector('span'), input = Object.assign(document.createElement('input'), { className: 'tree-rename', value: baseName(path), maxLength: 150 });
@@ -304,6 +317,44 @@
     const link = e.target.closest('a[data-path]');
     if (link) { e.preventDefault(); renameInline(link); }
   });
+
+  /* ---------- version history (shared docs you can edit) ---------- */
+  const hist = document.createElement('div');
+  hist.className = 'modal hidden'; hist.setAttribute('role', 'dialog'); hist.setAttribute('aria-modal', 'true');
+  hist.innerHTML = '<div class="modal-box wide"><h3>Version history</h3><p class="sh-lead">Every save is a version. The last few are kept, and restoring one saves it as a new version, so nothing is lost.</p><div id="hsList"></div><div class="modal-btns"><button class="btn" id="hsClose">Close</button></div></div>';
+  document.body.append(hist);
+  const when = (d) => new Date(d).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
+  async function openHistory() {
+    const S = window.mdvShared, box = $('#hsList');
+    hist.classList.remove('hidden'); box.textContent = 'Loading…';
+    const r = await S.api('versions', { id: S.id, password: S.password });
+    if (!r.ok) { box.textContent = r.data.error || 'Could not load the history.'; return; }
+    box.replaceChildren(...r.data.versions.map((v) => {
+      const row = document.createElement('div'); row.className = 'hs-row';
+      const info = document.createElement('div'); info.className = 'hs-info';
+      info.append(Object.assign(document.createElement('b'), { textContent: `Version ${v.version}${v.current ? ' (current)' : ''}` }),
+        Object.assign(document.createElement('small'), { textContent: `${v.by ? v.by + ' · ' : ''}${v.savedAt ? when(v.savedAt) : ''}` }));
+      row.append(info);
+      if (!v.current) {
+        const b = Object.assign(document.createElement('button'), { className: 'btn', textContent: 'Restore' });
+        let armed = 0;
+        b.onclick = async () => {                                // two clicks, so it is never an accident
+          if (!armed) { armed = setTimeout(() => { armed = 0; b.textContent = 'Restore'; }, 3000); b.textContent = 'Sure?'; return; }
+          clearTimeout(armed); b.disabled = true; b.textContent = 'Restoring…';
+          const got = await S.api('versions', { id: S.id, password: S.password, version: v.version });
+          if (!got.ok) { b.disabled = false; b.textContent = 'Restore'; toast(got.data.error || 'Could not restore.'); return; }
+          const msg = await push(async () => got.data.files);
+          if (msg) { b.disabled = false; b.textContent = 'Restore'; toast(msg, 4000); return; }
+          hist.classList.add('hidden'); await S.reload(got.data.files); toast(`Restored version ${v.version} as a new version`);
+        };
+        row.append(b);
+      }
+      return row;
+    }));
+  }
+  $('#histBtn').onclick = openHistory;
+  $('#hsClose').onclick = () => hist.classList.add('hidden');
+  hist.addEventListener('mousedown', (e) => { if (e.target === hist) hist.classList.add('hidden'); });
 
   /* ---------- wiring ---------- */
   $('#editBtn').onclick = startEdit;

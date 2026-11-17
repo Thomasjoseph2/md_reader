@@ -331,6 +331,10 @@
         id, version, password, get encrypted() { return docKey !== null; },
         signIn: async () => (me || (await signIn())) && true,
         encrypt: (f) => encryptFiles(f, docKey),
+        reload: async (f) => {                                  // show a restored version
+          if (typeof f[ENC_FILE] === 'string') f = await decryptFiles(f[ENC_FILE], docKey);
+          await load(Object.entries(f).map(([path, text]) => ({ path, file: new File([text], path.slice(path.lastIndexOf('/') + 1), { type: 'text/markdown' }) })), state.root, true);
+        },
         api,
       };
       if (canEdit || role === 'editor') document.body.classList.add('can-edit');

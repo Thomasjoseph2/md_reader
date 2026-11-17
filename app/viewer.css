@@ -575,3 +575,10 @@ body.editing-blocks #doc > [data-line]:hover { box-shadow: 0 0 0 2px var(--accen
 body.shared-view:not(.can-edit) #editBtn, body.editing #editBtn { display: none !important; }
 .tree-rename { flex: 1; min-width: 0; height: 22px; padding: 0 6px; border: 1px solid var(--accent); border-radius: 4px; background: var(--bg); color: var(--text); font: inherit; font-size: 13px; }
 @media print { #editBtn { display: none !important; } }
+
+#histBtn { display: none; }
+body.shared-view.can-edit:not(.editing) #histBtn { display: inline-flex; }
+.hs-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px solid var(--border); }
+.hs-row:first-child { border-top: 0; }
+.hs-info { display: grid; gap: 2px; min-width: 0; } .hs-info small { color: var(--muted); }
+@media print { #histBtn { display: none !important; } }
