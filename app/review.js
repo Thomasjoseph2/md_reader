@@ -69,6 +69,15 @@
     if (isOpen()) renderList();
     if (R.pendingFocus) { const id = R.pendingFocus; R.pendingFocus = null; focusComment(id); }
   };
+  leaveGuard = async () => {
+    if (R.dirty && R.comments.length) {
+      const choice = await askLeave();
+      if (choice === 'cancel') return false;
+      if (choice === 'download') await downloadReview();
+    }
+    return true;
+  };
+  homeHooks.push(() => { R.comments = []; R.dirty = false; R.draft = null; R.editing = null; closePanel(); refresh(); });
   addEventListener('beforeunload', (e) => {
     if (R.dirty && R.comments.length) { e.preventDefault(); e.returnValue = ''; }
   });

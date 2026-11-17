@@ -3,7 +3,8 @@
 Read Markdown files, and whole folders of them, the way GitHub shows them. Open a folder of plans, specs or notes and
 browse it like a small website: a file tree, working links between files, search, diagrams, and PDF export.
 
-Files never leave your computer. Nothing is uploaded and nothing is tracked.
+Files stay on your computer and nothing is tracked. The one exception is the optional **Share** button on the website: it
+uploads the Markdown text of the open folder, after you sign in with Google, so you can send a link (see below).
 
 ## What it opens
 
@@ -44,6 +45,19 @@ Comments are kept in the browser until downloaded, and the viewer warns before l
 **As a web page.** Open `index.html` in any browser. No install and no server needed.
 
 **Try it** on the sample folder in [`demo/project-plan`](demo/project-plan).
+
+## Share links (website only)
+
+The viewer is a static site (`app/`) plus a few Node functions (`api/`) on Vercel. Sharing needs a Postgres database and a Google sign-in.
+
+1. Copy `.env.example` to `.env` and fill it in. Add the same variables in Vercel (Settings, Environment Variables).
+2. Create tables: `node scripts/migrate.js`
+3. Google Cloud: create an OAuth client (Web application) with the redirect URIs
+   `https://<your-site>/api/auth/callback` and `http://localhost:3000/api/auth/callback`.
+4. Run locally with `npx vercel dev`.
+
+All database access goes through `api/_repo/` (see the interface at the top of `api/_repo/index.js`). To use another
+database, add a driver beside `postgres.js` and set `DB_DRIVER`.
 
 ## Install the extension from this folder (for testing)
 

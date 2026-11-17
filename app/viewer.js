@@ -39,6 +39,42 @@ function blobUrl(p) {
   return state.blobs.get(p);
 }
 
+/* ---------- dropdown menus (Open, PDF, account) ---------- */
+function closeMenus() {
+  document.querySelectorAll('.menu').forEach((m) => m.classList.add('hidden'));
+  document.querySelectorAll('[aria-haspopup="true"]').forEach((b) => b.setAttribute('aria-expanded', 'false'));
+}
+function toggleMenu(btn, box) {
+  const wasHidden = box.classList.contains('hidden');
+  closeMenus();
+  if (wasHidden) { box.classList.remove('hidden'); btn.setAttribute('aria-expanded', 'true'); }
+}
+function bindMenu(btn, box, beforeOpen) {
+  btn.addEventListener('click', (e) => { e.stopPropagation(); if (beforeOpen && box.classList.contains('hidden')) beforeOpen(); toggleMenu(btn, box); });
+}
+addEventListener('click', (e) => { if (!e.target.closest('.menu-wrap') || e.target.closest('.menu button, .menu a')) closeMenus(); });
+addEventListener('keydown', (e) => { if (e.key === 'Escape') closeMenus(); });
+bindMenu($('#changeBtn'), $('#openMenu'));
+
+/* ---------- back to the start page ---------- */
+const HOME_TITLE = document.title;
+let leaveGuard = async () => true;        // review.js replaces this: warns about comments not downloaded yet
+const homeHooks = [];                     // functions to run after going home
+async function goHome() {
+  if (!document.body.classList.contains('loaded')) return;
+  if (!(await leaveGuard())) return;
+  state.blobs.forEach((u) => URL.revokeObjectURL(u)); state.blobs.clear();
+  Object.assign(state, { root: '', files: new Map(), texts: new Map(), order: [], current: null, dirHandle: null, highlight: '' });
+  for (const k of ['tree', 'doc', 'toc', 'pager', 'crumbs', 'meta']) el[k].replaceChildren();
+  el.search.value = ''; el.rootName.textContent = '';
+  document.querySelector('.shared-note')?.remove();
+  document.body.classList.remove('loaded', 'one-file', 'nav-open', 'shared-view');
+  homeHooks.forEach((f) => f());
+  document.title = HOME_TITLE;
+  history.replaceState(null, '', location.pathname);   // drops ?s=… and #/file
+  scrollTo(0, 0);
+}
+
 /* ---------- theme ---------- */
 MD.initTheme();
 $('#themeBtn').onclick = () => {
@@ -146,8 +182,11 @@ function fromInput(input, fallback) {
   load(r.items, r.root);
 }
 $('#openFolderBtn').onclick = pickFolder;
-$('#changeBtn').onclick = pickFolder;
 $('#openFilesBtn').onclick = () => el.fileInput.click();
+$('#openFolderItem').onclick = pickFolder;
+$('#openFilesItem').onclick = () => el.fileInput.click();
+$('#homeItem').onclick = () => goHome();
+$('#homeBtn').onclick = () => goHome();
 el.dirInput.onchange = () => fromInput(el.dirInput, 'Folder');
 el.fileInput.onchange = () => fromInput(el.fileInput, 'Files');
 el.reloadBtn.onclick = async () => {
@@ -355,7 +394,6 @@ async function render(path, anchor, keepScroll) {
     (next ? `<a class="next" href="${hrefFor(next)}"><small>Next →</small><span>${esc(docTitle(next))}</span></a>` : '');
 
   MD.buildToc(el.doc, el.toc, (s) => hrefFor(path, s));
-  addTocHide();
   setActive(path);
   document.title = `${docTitle(path)} · ${state.root}`;
 
@@ -373,15 +411,11 @@ async function render(path, anchor, keepScroll) {
 
 /* ---------- PDF export (print dialog → Save as PDF) ---------- */
 const pdfMenu = $('#pdfMenu'), pdfBtn = $('#pdfBtn');
-function closePdfMenu() { pdfMenu.classList.add('hidden'); pdfBtn.setAttribute('aria-expanded', 'false'); }
 pdfBtn.onclick = (e) => {
   e.stopPropagation();
-  if (state.texts.size === 1) return exportPdf(false);
-  const hidden = pdfMenu.classList.toggle('hidden');
-  pdfBtn.setAttribute('aria-expanded', String(!hidden));
+  if (state.texts.size === 1) { closeMenus(); return exportPdf(false); }   // one file: no choice to make
+  toggleMenu(pdfBtn, pdfMenu);
 };
-addEventListener('click', (e) => { if (!e.target.closest('.pdf-wrap')) closePdfMenu(); });
-addEventListener('keydown', (e) => { if (e.key === 'Escape') closePdfMenu(); });
 $('#pdfPage').onclick = () => exportPdf(false);
 $('#pdfAll').onclick = () => exportPdf(true);
 
@@ -408,7 +442,7 @@ async function buildPrintAll() {
   return box;
 }
 async function exportPdf(all) {
-  closePdfMenu();
+  closeMenus();
   if (!state.current) return;
   let box;
   try {
@@ -429,31 +463,33 @@ async function exportPdf(all) {
   }
 }
 
-/* ---------- hide the file list / contents panels (remembered per browser) ---------- */
-const TOC_ICON = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="1.75" y="2.25" width="12.5" height="11.5" rx="2"/><path d="M10 2.5v11"/></svg>';
-const panels = { side: { cls: 'hide-side', key: 'mdv-hide-side' }, toc: { cls: 'hide-toc', key: 'mdv-hide-toc' } };
+/* ---------- show / hide the file list and the contents (separately, remembered per browser) ---------- */
+const PANELS = {
+  side: { cls: 'hide-side', key: 'mdv-hide-side' },
+  toc:  { cls: 'hide-toc',  key: 'mdv-hide-toc' },
+};
 function setPanel(name, hidden) {
-  const p = panels[name];
+  const p = PANELS[name];
   document.body.classList.toggle(p.cls, hidden);
-  $('#' + name + 'Show').classList.toggle('hidden', !hidden);
   try { localStorage.setItem(p.key, hidden ? '1' : ''); } catch {}
 }
-for (const name of Object.keys(panels)) {
+for (const [name, p] of Object.entries(PANELS)) {
   let saved = false;
-  try { saved = localStorage.getItem(panels[name].key) === '1'; } catch {}
+  try { saved = localStorage.getItem(p.key) === '1'; } catch {}
   setPanel(name, saved);
-  $('#' + name + 'Show').onclick = () => setPanel(name, false);
 }
-$('#sideHide').onclick = () => setPanel('side', true);
-// The contents list is rebuilt for every page, so its hide button is added after each build.
-function addTocHide() {
-  const h = el.toc.querySelector('h4');
-  if (!h) return;
-  const b = document.createElement('button');
-  b.className = 'panel-btn'; b.title = 'Hide contents'; b.setAttribute('aria-label', 'Hide contents'); b.innerHTML = TOC_ICON;
-  b.onclick = () => setPanel('toc', true);
-  h.append(b);
-}
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('.panel-btn');
+  if (b) setPanel(b.dataset.panel, !!b.dataset.hide);
+});
+// The \ key hides or shows both at once.
+addEventListener('keydown', (e) => {
+  if (e.key !== '\\' || e.ctrlKey || e.metaKey || e.altKey || /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) return;
+  if (!document.body.classList.contains('loaded')) return;
+  e.preventDefault();
+  const hide = !(document.body.classList.contains('hide-side') && document.body.classList.contains('hide-toc'));
+  setPanel('side', hide); setPanel('toc', hide);
+});
 
 /* ---------- search ---------- */
 function snippet(text, at, q) {
