@@ -539,6 +539,7 @@ body.shared-view .doc-actions, body.shared-view .rename-row { display: none !imp
 .edit-banner { margin: 0 0 10px; padding: 9px 12px; border-radius: 8px; font-size: 13px; line-height: 1.45; border: 1px solid var(--border); }
 .edit-banner.real { border-color: #d9a441; background: rgba(217,164,65,.14); color: var(--text); }
 .edit-banner.copy { background: var(--frame); color: var(--muted); }
+#edText.hidden { display: none; }
 #edText { display: block; width: 100%; min-height: 60vh; padding: 14px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text);
   font: 13.5px/1.6 'JetBrains Mono', ui-monospace, monospace; resize: vertical; tab-size: 2; }
 #edText:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
@@ -550,3 +551,11 @@ body.shared-view .doc-actions, body.shared-view .rename-row { display: none !imp
 .rn-err { font-size: 12.5px; color: #c0392b; }
 body.editing .pager, body.editing .meta { display: none; }
 @media print { .doc-actions, .rename-row, .editor { display: none !important; } }
+
+.edit-bar { position: sticky; top: var(--header-h); z-index: 6; padding: 8px 0; background: var(--bg); flex-wrap: wrap; }
+.edit-hint { margin: 4px 0 14px; color: var(--muted); font-size: 12.5px; }
+body.editing-blocks #doc > [data-line] { cursor: text; border-radius: 6px; transition: box-shadow .12s; }
+body.editing-blocks #doc > [data-line]:hover { box-shadow: 0 0 0 2px var(--accent); }
+.blk-edit { display: block; width: 100%; box-sizing: border-box; min-height: 48px; margin: 8px 0; padding: 10px 12px; border: 2px solid var(--accent); border-radius: 8px;
+  background: var(--bg); color: var(--text); font: 13.5px/1.6 'JetBrains Mono', ui-monospace, monospace; resize: none; overflow: hidden; }
+.blk-edit:focus { outline: none; }
