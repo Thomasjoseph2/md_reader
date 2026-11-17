@@ -13,7 +13,7 @@
     <div class="edit-bar"><button class="btn primary" id="edSave">Save</button><button class="btn" id="edCancel">Cancel</button>
       <button class="btn" id="edAdd" title="Add a new paragraph at the end">+ Add text</button>
       <button class="btn" id="edMode" title="See and edit the whole file as plain Markdown">Edit as raw Markdown</button><span id="edStatus"></span></div>
-    <p class="edit-hint" id="edHint">Click any paragraph, heading, list or code block to change it. Leave a block empty to delete it.</p>
+    <p class="edit-hint" id="edHint">Click any paragraph, heading, list, table or code block and change it right on the page. Clear a block to delete it.</p>
     <textarea id="edText" class="hidden" spellcheck="false" aria-label="Edit Markdown"></textarea>`;
   $('#doc').before(editor);
   const rename = document.createElement('form');
@@ -80,53 +80,123 @@
   }
   const settle = async () => { if (editing && editing.open) await editing.open.apply(); };
 
-  // open one block for editing
   const lineEnd = (draft) => (draft.includes('\r\n') ? '\r\n' : '\n');
-  function openBlock(block) {
-    if (!editing || editing.source || editing.open) return;
-    const isNew = !block, eol = lineEnd(editing.draft), lines = editing.draft.split(eol);
-    let start = 0, end = 0, body = '';
-    if (!isNew) {
-      start = +block.dataset.line - 1; end = +block.dataset.lineEnd;
-      body = lines.slice(start, end).join('\n');
+  // Which block did the click land in? Tables sit inside a scroll wrapper, so the line info is on the table itself.
+  const blockAt = (target) => {
+    const data = target.closest('#doc [data-line]');
+    if (!data) return null;
+    let top = data;
+    while (top.parentElement && top.parentElement.id !== 'doc') top = top.parentElement;
+    return top.parentElement && top.parentElement.id === 'doc' ? { top, data } : null;
+  };
+  const VISUAL = new Set(['paragraph', 'heading', 'list', 'blockquote', 'table', 'code', 'hr']);
+  let td = null;
+  function toMarkdown(host) {
+    if (!td) {
+      td = new TurndownService({ headingStyle: 'atx', codeBlockStyle: 'fenced', bulletListMarker: '-', hr: '---', emDelimiter: '*', strongDelimiter: '**', br: '  ' });
+      td.use(turndownPluginGfm.gfm);
+      td.escape = (t) => t;                                      // keep the author's text as typed
+      td.addRule('keepImageSource', { filter: 'img', replacement: (c, n) => `![${n.getAttribute('alt') || ''}](${n.dataset.src || n.getAttribute('src')}${n.title ? ` "${n.title}"` : ''})` });
     }
-    const ta = Object.assign(document.createElement('textarea'), { className: 'blk-edit', spellcheck: false, value: body.replace(/\s+$/, '') });
-    ta.setAttribute('aria-label', 'Edit this block');
-    const grow = () => { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 4 + 'px'; };
-    if (block) block.classList.add('hidden'); 
-    (block || $('#doc').lastElementChild || $('#doc')).after(ta);
-    if (!block && !$('#doc').lastElementChild) $('#doc').append(ta);
-    ta.oninput = grow; grow(); ta.focus();
+    const copy = host.cloneNode(true);
+    copy.querySelectorAll('td br, th br').forEach((b) => b.remove());          // a line break inside a table cell would break the table
+    return td.turndown(copy.innerHTML).replace(/\n{3,}/g, '\n\n');
+  }
+  function toolbar(host, hasTable, hasCode) {
+    const bar = document.createElement('div'); bar.className = 'blk-bar';
+    const add = (label, title, fn, cls) => {
+      const b = Object.assign(document.createElement('button'), { type: 'button', textContent: label, title, className: cls || '' });
+      b.onmousedown = (e) => { e.preventDefault(); host.focus(); fn(); };       // keep the selection inside the block
+      bar.append(b);
+    };
+    const cmd = (c, v) => () => document.execCommand(c, false, v);
+    if (!hasCode) {
+      add('B', 'Bold', cmd('bold'), 'b'); add('I', 'Italic', cmd('italic'), 'i');
+      add('</>', 'Inline code', () => { const t = getSelection().toString(); if (t) document.execCommand('insertHTML', false, `<code>${t.replace(/[<&]/g, (m) => (m === '<' ? '&lt;' : '&amp;'))}</code>`); });
+      add('Link', 'Make a link', () => { const u = prompt('Link address'); if (u) document.execCommand('createLink', false, u); });
+      if (!hasTable) {
+        add('H1', 'Big heading', cmd('formatBlock', 'h1')); add('H2', 'Heading', cmd('formatBlock', 'h2')); add('H3', 'Small heading', cmd('formatBlock', 'h3')); add('Text', 'Normal paragraph', cmd('formatBlock', 'p'));
+        add('• List', 'Bulleted list', cmd('insertUnorderedList')); add('1. List', 'Numbered list', cmd('insertOrderedList')); add('Quote', 'Quote', cmd('formatBlock', 'blockquote'));
+      }
+    }
+    if (hasTable) {
+      const cell = () => { const n = getSelection().anchorNode; const el = n && (n.nodeType === 1 ? n : n.parentElement); return el && el.closest('td,th'); };
+      const idx = (c) => [...c.parentElement.children].indexOf(c);
+      add('+ Row', 'Add a row below', () => { const c = cell(); const r = (c ? c.closest('tr') : host.querySelector('tbody tr:last-child, tr:last-child')); if (!r) return;
+        const n = r.cloneNode(true); n.querySelectorAll('td,th').forEach((x) => { x.innerHTML = ''; }); (r.parentElement.tagName === 'THEAD' ? host.querySelector('tbody') || r.parentElement : r.parentElement).insertBefore(n, r.parentElement.tagName === 'THEAD' ? (host.querySelector('tbody') || r.parentElement).firstChild : r.nextSibling); });
+      add('− Row', 'Delete this row', () => { const c = cell(); const r = c && c.closest('tr'); if (r && r.parentElement.tagName !== 'THEAD') r.remove(); });
+      add('+ Column', 'Add a column to the right', () => { const c = cell(); const i = c ? idx(c) : host.querySelectorAll('tr')[0].children.length - 1;
+        host.querySelectorAll('tr').forEach((r) => { const x = document.createElement(r.parentElement.tagName === 'THEAD' ? 'th' : 'td'); x.innerHTML = ''; r.insertBefore(x, r.children[i + 1] || null); }); });
+      add('− Column', 'Delete this column', () => { const c = cell(); if (!c) return; const i = idx(c); if (c.parentElement.children.length < 2) return; host.querySelectorAll('tr').forEach((r) => r.children[i] && r.children[i].remove()); });
+    }
+    return bar;
+  }
+
+  // open one block for editing: as it looks on the page when it is plain text, lists, tables or code; raw text for anything else
+  function openBlock(hit) {
+    if (!editing || editing.source || editing.open) return;
+    const isNew = !hit, eol = lineEnd(editing.draft), lines = editing.draft.split(eol);
+    let start = 0, end = 0, body = '';
+    if (!isNew) { start = +hit.data.dataset.line - 1; end = +hit.data.dataset.lineEnd; body = lines.slice(start, end).join('\n').replace(/\s+$/, ''); }
+    const types = isNew ? [] : marked.lexer(body).filter((t) => t.type !== 'space').map((t) => t.type);
+    const visual = !isNew && types.length === 1 && VISUAL.has(types[0]);
+    const old = lines.slice(start, end), tail = [];
+    while (old.length && old.at(-1).trim() === '') tail.unshift(old.pop());
+
+    const wrap = document.createElement('div'); wrap.className = 'blk-wrap';
+    let ta = null, host = null, startHtml = '';
+    if (visual) {
+      host = document.createElement('div'); host.className = 'md blk-visual'; host.contentEditable = 'true'; host.spellcheck = true;
+      host.innerHTML = DOMPurify.sanitize(marked.parse(body));
+      host.querySelectorAll('img').forEach((im) => {                       // show images from the folder, but remember what the file says
+        const src = im.getAttribute('src') || ''; im.dataset.src = src;
+        const full = join(dirOf(editing.path), decodeURI(src.split(/[?#]/)[0]));
+        if (state.files.has(full)) im.src = blobUrl(full);
+      });
+      host.querySelectorAll('pre').forEach((p) => { p.contentEditable = 'plaintext-only'; });
+      startHtml = host.innerHTML;
+      wrap.append(toolbar(host, !!host.querySelector('table'), types[0] === 'code'), host);
+      document.execCommand('defaultParagraphSeparator', false, 'p');
+    } else {
+      ta = Object.assign(document.createElement('textarea'), { className: 'blk-edit', spellcheck: false, value: body });
+      ta.setAttribute('aria-label', 'Edit this block');
+      const grow = () => { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 4 + 'px'; };
+      ta.oninput = grow; wrap.append(ta); setTimeout(grow, 0);
+    }
+    const anchor = hit ? hit.top : ($('#doc').lastElementChild || null);
+    if (hit) hit.top.classList.add('hidden');
+    if (anchor) anchor.after(wrap); else $('#doc').append(wrap);
+    (host || ta).focus();
+
     let done = false;
     const finish = async (keep) => {
       if (done) return; done = true; editing.open = null;
-      const text = ta.value.replace(/\r/g, '');
-      ta.remove(); if (block) block.classList.remove('hidden');
-      if (!keep) return;
+      let text = null;
+      if (keep) text = host ? (host.innerHTML === startHtml ? null : toMarkdown(host)) : ta.value.replace(/\r/g, '');
+      wrap.remove(); if (hit) hit.top.classList.remove('hidden');
+      if (text === null) return;                                              // nothing changed: the file keeps its exact text
       let next;
       if (isNew) next = text.trim() ? editing.draft.replace(/\s*$/, '') + eol + eol + text.replace(/\n/g, eol).replace(/\s+$/, '') + eol : editing.draft;
       else {
-        const old = lines.slice(start, end), tail = [];
-        while (old.length && old.at(-1).trim() === '') tail.unshift(old.pop());
         const mid = text.trim() === '' ? [] : text.replace(/\s+$/, '').split('\n');
-        lines.splice(start, end - start, ...(mid.length ? [...mid, ...tail] : []));
-        next = lines.join(eol);
+        const all = editing.draft.split(eol); all.splice(start, end - start, ...(mid.length ? [...mid, ...tail] : []));
+        next = all.join(eol);
       }
       if (next !== editing.draft) { editing.draft = next; await show(next); }
     };
     editing.open = { apply: () => finish(true) };
-    ta.onblur = () => finish(true);
-    ta.onkeydown = (e) => {
+    wrap.addEventListener('focusout', (e) => { if (!wrap.contains(e.relatedTarget)) setTimeout(() => { if (!wrap.contains(document.activeElement)) finish(true); }, 0); });
+    wrap.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') { e.preventDefault(); finish(false); }
       else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); finish(true); }
-    };
+    });
   }
   $('#doc').addEventListener('click', (e) => {
     if (!editing || editing.source) return;
-    const block = e.target.closest('#doc > [data-line]');
-    if (!block) return;
+    const hit = blockAt(e.target);
+    if (!hit) return;
     e.preventDefault();                                           // links and anchors do not navigate while editing
-    openBlock(block);
+    openBlock(hit);
   });
   q.add.onclick = () => openBlock(null);
   q.mode.onclick = toggleSource;

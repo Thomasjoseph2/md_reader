@@ -559,3 +559,15 @@ body.editing-blocks #doc > [data-line]:hover { box-shadow: 0 0 0 2px var(--accen
 .blk-edit { display: block; width: 100%; box-sizing: border-box; min-height: 48px; margin: 8px 0; padding: 10px 12px; border: 2px solid var(--accent); border-radius: 8px;
   background: var(--bg); color: var(--text); font: 13.5px/1.6 'JetBrains Mono', ui-monospace, monospace; resize: none; overflow: hidden; }
 .blk-edit:focus { outline: none; }
+
+.blk-wrap { margin: 8px 0; padding: 8px 10px 10px; border: 2px solid var(--accent); border-radius: 10px; background: var(--bg); }
+.blk-visual { outline: none; min-height: 1.6em; }
+.blk-visual > :first-child { margin-top: 0; } .blk-visual > :last-child { margin-bottom: 0; }
+.blk-visual table td, .blk-visual table th { min-width: 3em; }
+.blk-bar { display: flex; flex-wrap: wrap; gap: 4px; margin: 0 0 8px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+.blk-bar button { height: 26px; min-width: 28px; padding: 0 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--frame); color: var(--text); font-size: 12.5px; cursor: pointer; }
+.blk-bar button:hover { background: var(--border); }
+.blk-bar .b { font-weight: 700; } .blk-bar .i { font-style: italic; }
+.blk-wrap .blk-edit { margin: 0; border: 0; padding: 0; }
+
+.blk-visual td, .blk-visual th { min-height: 1.6em; height: 2em; }
