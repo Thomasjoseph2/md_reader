@@ -465,22 +465,23 @@ async function exportPdf(all) {
 
 /* ---------- show / hide the file list and the contents (separately, remembered per browser) ---------- */
 const PANELS = {
-  side: { cls: 'hide-side', key: 'mdv-hide-side', btn: '#sideBtn', what: 'the file list' },
-  toc:  { cls: 'hide-toc',  key: 'mdv-hide-toc',  btn: '#tocBtn',  what: 'the contents' },
+  side: { cls: 'hide-side', key: 'mdv-hide-side' },
+  toc:  { cls: 'hide-toc',  key: 'mdv-hide-toc' },
 };
 function setPanel(name, hidden) {
-  const p = PANELS[name], b = $(p.btn);
+  const p = PANELS[name];
   document.body.classList.toggle(p.cls, hidden);
-  b.setAttribute('aria-pressed', String(hidden));
-  b.title = b.ariaLabel = (hidden ? 'Show ' : 'Hide ') + p.what;
   try { localStorage.setItem(p.key, hidden ? '1' : ''); } catch {}
 }
 for (const [name, p] of Object.entries(PANELS)) {
   let saved = false;
   try { saved = localStorage.getItem(p.key) === '1'; } catch {}
   setPanel(name, saved);
-  $(p.btn).onclick = () => setPanel(name, !document.body.classList.contains(p.cls));
 }
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('.panel-btn');
+  if (b) setPanel(b.dataset.panel, !!b.dataset.hide);
+});
 // The \ key hides or shows both at once.
 addEventListener('keydown', (e) => {
   if (e.key !== '\\' || e.ctrlKey || e.metaKey || e.altKey || /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) return;

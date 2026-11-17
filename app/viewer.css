@@ -448,14 +448,6 @@ body.one-file .sidebar, body.one-file #menuBtn { display: none !important; }
 .menu .who b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .menu .who small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .menu button.plain b { font-weight: 500; }
-/* Panel toggles: the bar is filled while that panel is showing, and empty once it is hidden */
-.panel-toggle .bar { fill: currentColor; }
-.panel-toggle[aria-pressed="true"] .bar { fill: none; }
-.panel-toggle:not([aria-pressed="true"]) { color: var(--text); }
-header .panel-toggle + .panel-toggle { margin-left: -4px; }
-@media (max-width: 1200px) { #tocBtn { display: none !important; } }
-@media (max-width: 860px) { #sideBtn { display: none !important; } }
-body.one-file #sideBtn { display: none !important; }
 @media print { header { display: none !important; } }
 
 /* ---------- share + shared links ---------- */
@@ -509,3 +501,20 @@ body.one-file #sideBtn { display: none !important; }
   header .btn:not(.icon-btn) { padding: 0 10px; }
   #rootName, .shared-note { display: none !important; }
 }
+
+/* Hide / show arrows for the file list and the contents */
+.panel-btn { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; flex: none; padding: 0;
+  border: 0; border-radius: 6px; background: transparent; color: var(--muted); cursor: pointer; }
+.panel-btn:hover { background: var(--border); color: var(--text); }
+.search-box { display: flex; align-items: center; gap: 6px; }
+#tocClose { position: fixed; top: calc(var(--header-h) + 10px); right: 10px; z-index: 5; }
+.open-tab { display: none; position: fixed; top: calc(var(--header-h) + 10px); z-index: 5; width: 22px; height: 40px;
+  background: var(--frame); border: 1px solid var(--border); }
+#sideOpen { left: 0; border-left: 0; border-radius: 0 8px 8px 0; }
+#tocOpen { right: 0; border-right: 0; border-radius: 8px 0 0 8px; }
+body.hide-side #sideOpen, body.hide-toc #tocOpen { display: inline-flex; }
+body.hide-toc #tocClose, body.cmt-open #tocClose, body.cmt-open #tocOpen { display: none; }
+body.one-file .sidebar .panel-btn, body.one-file #sideOpen { display: none; }
+@media (max-width: 1200px) { #tocClose, #tocOpen { display: none !important; } }
+@media (max-width: 1000px) { .sidebar .panel-btn, #sideOpen { display: none !important; } }
+@media print { .panel-btn { display: none !important; } }
