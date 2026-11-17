@@ -389,7 +389,7 @@ body.one-file .sidebar, body.one-file #menuBtn { display: none !important; }
 .cmt-badge { position: absolute; top: 0; right: -38px; min-width: 24px; height: 22px; padding: 0 6px; border: 0; border-radius: 11px 11px 11px 3px;
   background: #d4a72c; color: #1f2328; font-size: 12px; font-weight: 700; cursor: pointer; }
 .modal { position: fixed; inset: 0; z-index: 150; display: grid; place-items: center; padding: 16px; background: rgba(0,0,0,.45); }
-.modal-box { width: 100%; max-width: 440px; padding: 20px; border-radius: 12px; background: var(--bg); border: 1px solid var(--border); box-shadow: 0 20px 60px rgba(0,0,0,.3); }
+.modal-box { width: 100%; max-width: 440px; padding: 20px; border-radius: 12px; background: var(--bg); border: 1px solid var(--border); max-height: calc(100vh - 32px); max-height: calc(100dvh - 32px); overflow-y: auto; overscroll-behavior: contain; box-shadow: 0 20px 60px rgba(0,0,0,.3); }
 .modal-box h3 { margin: 0 0 8px; }
 .modal-box p { margin: 0 0 16px; color: var(--muted); font-size: 14px; }
 .modal-btns { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
