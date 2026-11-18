@@ -120,7 +120,7 @@
       </details>`;
     const q = (s) => root.querySelector(s);
     const roleSel = q('.role'), exportBox = q('.export'); roleSel.value = init.role || 'viewer'; exportBox.checked = !!init.allowExport;
-    const emails = q('textarea'), pw = q('.acc-pw input'), rm = q('.acc-rm input'), days = q('select'), more = q('.acc-more');
+    const emails = q('textarea'), pw = q('.acc-pw input'), rm = q('.acc-rm input'), days = q('.acc-days select'), more = q('.acc-more');
     root.querySelector(`input[value="${vis}"]`).checked = true;
     emails.value = (init.emails || []).join('\n');
     days.value = '30';
