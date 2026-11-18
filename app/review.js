@@ -13,7 +13,9 @@
   };
 
   /* ---------- small helpers ---------- */
-  const me = () => ui.name.value.trim();
+  // On a shared doc the comments live on the server and the author is the signed-in Google account.
+  const cloud = () => !!(window.mdvShared && mdvShared.id && !document.body.classList.contains('no-comment'));
+  const me = () => (cloud() && mdvShared.user ? mdvShared.user.name || mdvShared.user.email : ui.name.value.trim());
   const norm = (s) => s.replace(/\s+/g, ' ').trim();
   const slugify = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'review';
   const linesText = (c) => (c.lineStart ? (c.lineStart === c.lineEnd ? `line ${c.lineStart}` : `lines ${c.lineStart}–${c.lineEnd}`) : '');
@@ -37,9 +39,11 @@
   try { ui.name.value = localStorage.getItem('mdv-reviewer') || ''; } catch {}
   ui.name.addEventListener('input', () => { ui.name.classList.remove('need'); try { localStorage.setItem('mdv-reviewer', me()); } catch {} });
   const storeKey = () => 'mdv-review:' + state.root + ':' + state.texts.size;
-  function persist() { try { localStorage.setItem(R.key, JSON.stringify({ comments: R.comments, dirty: R.dirty })); } catch {} }
+  function persist() { if (cloud()) return; try { localStorage.setItem(R.key, JSON.stringify({ comments: R.comments, dirty: R.dirty })); } catch {} }
   function restore() {
     R.key = storeKey(); R.comments = []; R.dirty = false; R.changedFiles = [];
+    clearInterval(C.timer);
+    if (cloud()) { R.key = ''; refresh(); decorate(); startCloud(); return; }
     try {
       const d = JSON.parse(localStorage.getItem(R.key) || 'null');
       if (d?.comments?.length) {
@@ -49,7 +53,56 @@
     } catch {}
     refresh(); decorate();
   }
-  function changed() { R.dirty = true; persist(); refresh(); }
+  function changed() {
+    if (cloud()) { R.dirty = false; refresh(); syncUp(); return; }
+    R.dirty = true; persist(); refresh();
+  }
+
+  /* ---------- shared docs: comments are saved on the server for everyone with access ---------- */
+  const C = { snap: new Map(), by: new Map(), me: null, mod: false, timer: 0, busy: null, error: '' };
+  const capi = (action, extra = {}) => mdvShared.api('comments', { id: mdvShared.id, password: mdvShared.password, action, ...extra });
+  const packC = async (c) => { const t = JSON.stringify(c); return mdvShared.encrypted ? mdvShared.seal(t) : t; };
+  const unpackC = async (t) => JSON.parse(mdvShared.encrypted ? await mdvShared.open(t) : t);
+  const ownC = (c) => !cloud() || !C.by.has(c.id) || C.by.get(c.id) === C.me;
+  async function pull() {
+    if (!cloud() || !mdvShared.user || R.draft || R.editing || C.busy) return;
+    let r;
+    try { r = await capi('list'); } catch { return; }
+    if (!r.ok) { C.error = r.data.error || 'Could not load the comments.'; refresh(); return; }
+    if (R.draft || R.editing || C.busy) return;           // the person started typing meanwhile: do not replace their view
+    C.error = ''; C.me = r.data.userId; C.mod = r.data.canModerate;
+    const list = [], snap = new Map(), by = new Map();
+    for (const row of r.data.comments) {
+      try { const c = await unpackC(row.data); c.id = row.id; list.push(c); snap.set(row.id, JSON.stringify(c)); by.set(row.id, row.authorId); } catch {}
+    }
+    C.snap = snap; C.by = by; R.comments = list;
+    refresh(); decorate();
+  }
+  async function startCloud() {
+    clearInterval(C.timer); C.snap = new Map(); C.by = new Map(); C.error = '';
+    if (!mdvShared.user) return;                            // they are asked to sign in when they open the panel
+    await pull();
+    C.timer = setInterval(() => { if (!document.hidden) pull(); }, 10000);
+  }
+  function syncUp() {
+    const run = async () => {
+      try {
+        C.me = C.me || mdvShared.user?.id;
+        for (const c of [...R.comments]) {
+          const j = JSON.stringify(c);
+          if (C.snap.get(c.id) === j || (C.by.has(c.id) && C.by.get(c.id) !== C.me)) continue;
+          const r = await capi('put', { cid: c.id, data: await packC(c) });
+          if (r.ok) { C.snap.set(c.id, j); C.by.set(c.id, C.me); } else toast(r.data.error || 'Could not save the comment.', 4000);
+        }
+        for (const id of [...C.snap.keys()]) {
+          if (R.comments.some((c) => c.id === id)) continue;
+          const r = await capi('delete', { cid: id });
+          if (r.ok) { C.snap.delete(id); C.by.delete(id); } else toast(r.data.error || 'Could not remove the comment.', 4000);
+        }
+      } catch { toast('Could not save the comment. Check your connection.', 4000); }
+    };
+    const mine = (C.busy = (C.busy || Promise.resolve()).then(run).finally(() => { if (C.busy === mine) C.busy = null; }));
+  }
 
   /* ---------- hook into the viewer ---------- */
   const viewerLoad = load;
@@ -77,7 +130,7 @@
     }
     return true;
   };
-  homeHooks.push(() => { R.comments = []; R.dirty = false; R.draft = null; R.editing = null; closePanel(); refresh(); });
+  homeHooks.push(() => { clearInterval(C.timer); R.comments = []; R.dirty = false; R.draft = null; R.editing = null; closePanel(); refresh(); });
   addEventListener('beforeunload', (e) => {
     if (R.dirty && R.comments.length) { e.preventDefault(); e.returnValue = ''; }
   });
@@ -259,6 +312,10 @@
   });
   ui.form.onsubmit = async (e) => {
     e.preventDefault();
+    if (cloud() && !mdvShared.user) {
+      if (!(await mdvShared.signIn())) { toast('Sign in with Google to comment.'); return; }
+      startCloud();
+    }
     if (!me()) { ui.name.classList.add('need'); ui.name.focus(); toast('Add your name first, so the owner knows who commented.'); return; }
     const type = ui.type.value, text = ui.text.value.trim();
     const suggestion = type === 'change' ? ui.sug.value.replace(/\s+$/, '') : '';
@@ -288,6 +345,7 @@
   const isOpen = () => !ui.panel.classList.contains('hidden');
   function openPanel(filter) {
     if (filter) R.filter = filter;
+    if (cloud() && !mdvShared.user) mdvShared.signIn().then((ok) => { if (ok) { startCloud(); refresh(); } });
     ui.panel.classList.remove('hidden');
     document.body.classList.add('cmt-open');
     ui.btn.setAttribute('aria-expanded', 'true');
@@ -310,6 +368,15 @@
     const n = R.comments.length;
     ui.count.textContent = n || '';
     ui.dot.classList.toggle('hidden', !(R.dirty && n));
+    if (cloud() && mdvShared.user) { ui.name.value = me(); ui.name.readOnly = true; }
+    else if (ui.name.readOnly) { ui.name.readOnly = false; try { ui.name.value = localStorage.getItem('mdv-reviewer') || ''; } catch {} }
+    if (cloud()) {
+      ui.status.innerHTML = C.error ? esc(C.error) : !mdvShared.user ? 'Sign in with Google to see and add comments.'
+        : (n ? `${n} comment${n > 1 ? 's' : ''} · ` : 'Select text in the document and click <b>Comment</b>. ') + 'Saved for everyone who has this link.';
+      ui.count.textContent = n || ''; ui.dot.classList.add('hidden');
+      if (isOpen()) renderList();
+      return;
+    }
     ui.status.innerHTML = !n ? 'Select text in the document and click <b>Comment</b>, or use <b>+ Add comment</b>.'
       : `${n} comment${n > 1 ? 's' : ''} · ` + (R.dirty ? '<span class="warn">not downloaded yet</span>' : 'downloaded')
         + (R.changedFiles.length ? `<br><span class="warn">Changed since the review:</span> ${R.changedFiles.map(esc).join(', ')}` : '');
@@ -351,7 +418,7 @@
         ${c.quote ? `<blockquote>${esc(c.quote)}</blockquote>` : ''}
         ${c.text ? `<p class="ci-text">${esc(c.text)}</p>` : ''}
         ${c.suggestion ? `<div class="ci-sug"><small>Suggested text</small><pre>${esc(c.suggestion)}</pre></div>` : ''}
-        <div class="ci-act"><button data-act="go">Show</button><button data-act="edit">Edit</button><button data-act="del">Delete</button></div>
+        <div class="ci-act"><button data-act="go">Show</button>${ownC(c) ? '<button data-act="edit">Edit</button>' : ''}${ownC(c) || C.mod ? '<button data-act="del">Delete</button>' : ''}</div>
       </div>`;
     }).join('');
   }
@@ -493,7 +560,7 @@
     R.changedFiles = [];
     const results = [];
     for (const f of files) results.push(await openReview(f));
-    persist(); refresh(); decorate(); openPanel('all');
+    persist(); refresh(); decorate(); if (cloud()) syncUp(); openPanel('all');
     const ok = results.filter((r) => !r.error), bad = results.filter((r) => r.error);
     const added = ok.reduce((n, r) => n + r.added, 0), missing = ok.reduce((n, r) => n + r.missing, 0);
     toast((ok.length ? `Opened ${[...new Set(ok.map((r) => r.reviewer))].join(', ')}: ${added} new comment${added === 1 ? '' : 's'}` +

@@ -123,6 +123,21 @@ const docs = {
   async clearFailedAttempts(id) { await q('update shared_docs set failed_attempts = 0 where id = $1 and failed_attempts <> 0', [id]); },
 };
 
+const comments = {
+  async list(docId) {
+    return (await q('select id, author_id as "authorId", author, data, created_at as "createdAt", updated_at as "updatedAt" from doc_comments where doc_id = $1 order by created_at', [docId])).rows;
+  },
+  async get(docId, id) {
+    return (await q('select id, author_id as "authorId" from doc_comments where doc_id = $1 and id = $2', [docId, id])).rows[0] || null;
+  },
+  async count(docId) { return +(await q('select count(*) from doc_comments where doc_id = $1', [docId])).rows[0].count; },
+  async upsert(docId, id, userId, author, data) {
+    await q(`insert into doc_comments (doc_id, id, author_id, author, data) values ($1,$2,$3,$4,$5)
+             on conflict (doc_id, id) do update set data = excluded.data, updated_at = now()`, [docId, id, userId, author, data]);
+  },
+  async remove(docId, id) { return (await q('delete from doc_comments where doc_id = $1 and id = $2', [docId, id])).rowCount > 0; },
+};
+
 const housekeeping = {
   async purge() {
     await q(`delete from shared_docs where expires_at < now() - interval '1 day'`);
@@ -130,4 +145,4 @@ const housekeeping = {
   },
 };
 
-module.exports = { users, sessions, docs, housekeeping };
+module.exports = { users, sessions, docs, comments, housekeeping };

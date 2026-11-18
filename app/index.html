@@ -90,13 +90,15 @@
     <span class="hide-sm">Share</span>
   </button>
   <div class="menu-wrap when-loaded">
-    <button class="btn icon-btn" id="pdfBtn" aria-haspopup="true" aria-expanded="false" title="Save as PDF" aria-label="Save as PDF">
+    <button class="btn icon-btn" id="pdfBtn" aria-haspopup="true" aria-expanded="false" title="Download" aria-label="Download">
       <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M2.75 14A1.75 1.75 0 0 1 1 12.25v-2.5a.75.75 0 0 1 1.5 0v2.5c0 .138.112.25.25.25h10.5a.25.25 0 0 0 .25-.25v-2.5a.75.75 0 0 1 1.5 0v2.5A1.75 1.75 0 0 1 13.25 14Z"/><path d="M7.25 7.689V2a.75.75 0 0 1 1.5 0v5.689l1.97-1.969a.749.749 0 1 1 1.06 1.06l-3.25 3.25a.749.749 0 0 1-1.06 0L4.22 6.78a.749.749 0 1 1 1.06-1.06l1.97 1.969Z"/></svg>
     </button>
     <div class="menu hidden" id="pdfMenu" role="menu">
-      <button role="menuitem" id="pdfPage"><b>This page</b><small>The file you are reading</small></button>
-      <button role="menuitem" id="pdfAll"><b>Whole folder</b><small>Every file in one PDF, with a contents page</small></button>
-      <div class="hint">In the print window, set Destination to “Save as PDF”.</div>
+      <button role="menuitem" id="mdPage"><b>This file (.md)</b><small>The Markdown text, as it is now</small></button>
+      <button role="menuitem" id="zipAll"><b>Whole folder (.zip)</b><small>Every file, in the same folders</small></button>
+      <button role="menuitem" id="pdfPage"><b>This page as PDF</b><small>The file you are reading</small></button>
+      <button role="menuitem" id="pdfAll"><b>Whole folder as PDF</b><small>One PDF with a contents page</small></button>
+      <div class="hint">For PDF, set Destination to “Save as PDF” in the print window.</div>
     </div>
   </div>
   <button class="btn icon-btn" id="themeBtn" aria-label="Toggle dark mode" title="Toggle dark mode">
@@ -310,11 +312,11 @@
 <input type="file" id="dirInput" webkitdirectory directory multiple hidden>
 <input type="file" id="fileInput" multiple accept=".md,.markdown,.mdx,.txt,image/*" hidden>
 
-<script defer src="viewer.js?v=hist1"></script>
+<script defer src="viewer.js?v=dl1"></script>
 <script defer src="lib/turndown.min.js"></script>
 <script defer src="lib/turndown-plugin-gfm.js"></script>
 <script defer src="edit.js?v=hist3"></script>
-<script defer src="review.js"></script>
+<script defer src="review.js?v=dl1"></script>
 <script defer src="share.js?v=hist3"></script>
 </body>
 </html>

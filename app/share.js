@@ -44,6 +44,25 @@
     return JSON.parse(new TextDecoder().decode(pt));
   }
 
+  // Comments on an encrypted doc: same secret key, one key derivation per page (salt tied to the doc), a fresh iv each time.
+  let cKey = null;
+  async function commentKey(docId, pass) {
+    if (!cKey) {
+      const salt = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode('mdv-comments:' + docId))).slice(0, 16);
+      cKey = deriveKey(pass, salt, ITER);
+    }
+    return cKey;
+  }
+  async function sealText(docId, pass, text) {
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, await commentKey(docId, pass), new TextEncoder().encode(text));
+    return JSON.stringify({ v: 1, iv: b64(iv), ct: b64(ct) });
+  }
+  async function openText(docId, pass, blob) {
+    const e = JSON.parse(blob);
+    return new TextDecoder().decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: unb64(e.iv) }, await commentKey(docId, pass), unb64(e.ct)));
+  }
+
   /* ---------- who is signed in ---------- */
   const personIcon = onWeb ? $('#profileBtn').innerHTML : '';
   async function whoAmI() { try { me = (await api('auth/me')).data.user || null; } catch { me = null; } updateProfile(); return me; }
@@ -331,6 +350,9 @@
         id, version, password, get encrypted() { return docKey !== null; },
         signIn: async () => (me || (await signIn())) && true,
         encrypt: (f) => encryptFiles(f, docKey),
+        role, isOwner, canModerate: !!isOwner || role === 'editor',
+        get user() { return me; },
+        seal: (t) => sealText(id, docKey, t), open: (t) => openText(id, docKey, t),
         reload: async (f) => {                                  // show a restored version
           if (typeof f[ENC_FILE] === 'string') f = await decryptFiles(f[ENC_FILE], docKey);
           await load(Object.entries(f).map(([path, text]) => ({ path, file: new File([text], path.slice(path.lastIndexOf('/') + 1), { type: 'text/markdown' }) })), state.root, true);
