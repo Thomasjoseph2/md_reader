@@ -192,7 +192,7 @@
       const usedKey = $('#shEnc').checked ? $('#shKey').value : '';
       $('#shKeyOut').value = usedKey; show('#shKeyDone', !!usedKey);
       const enc = $('#shEnc').checked ? ' Encrypted: send the secret key to your reader separately.' : '';
-      let copied = false; try { await navigator.clipboard.writeText(url); copied = true; } catch {}
+      let copied = false; try { await Promise.race([navigator.clipboard.writeText(url), new Promise((_, no) => setTimeout(no, 1500))]); copied = true; } catch {}
       $('#shDoneMeta').textContent = `${copied ? 'Link copied. ' : 'Your link is ready. '}${who[0].toUpperCase() + who.slice(1)} · expires ${fmtDate(data.expiresAt)}.${enc}`;
       only('#shDone'); $('#shUrl').select();
     } catch (e) {

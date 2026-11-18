@@ -339,7 +339,7 @@
         const b = Object.assign(document.createElement('button'), { className: 'btn', textContent: 'Restore' });
         let armed = 0;
         b.onclick = async () => {                                // two clicks, so it is never an accident
-          if (!armed) { armed = setTimeout(() => { armed = 0; b.textContent = 'Restore'; }, 3000); b.textContent = 'Sure?'; return; }
+          if (!armed) { armed = setTimeout(() => { armed = 0; b.textContent = 'Restore'; }, 6000); b.textContent = 'Sure?'; return; }
           clearTimeout(armed); b.disabled = true; b.textContent = 'Restoring…';
           const got = await S.api('versions', { id: S.id, password: S.password, version: v.version });
           if (!got.ok) { b.disabled = false; b.textContent = 'Restore'; toast(got.data.error || 'Could not restore.'); return; }
