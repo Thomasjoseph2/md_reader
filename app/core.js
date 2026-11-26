@@ -106,7 +106,7 @@
   function buildTree(rows) {
     const root = document.createElement('div'); root.className = 'tree-card';
     rows.forEach((r) => {
-      const row = document.createElement('div'); row.className = 'tree-row'; row.style.setProperty('--d', r.depth);
+      const row = document.createElement('div'); row.className = 'tree-row' + (!r.desc && /\s/.test(r.name) ? ' solo' : ''); row.style.setProperty('--d', r.depth);
       const n = document.createElement('div'); n.className = 'tree-name' + (r.name.endsWith('/') ? ' dir' : ''); n.textContent = r.name;
       const d = document.createElement('div'); d.className = 'tree-desc';
       (r.desc || '').split(/(`[^`]+`)/).forEach((part) => { if (/^`[^`]+`$/.test(part)) { const c = document.createElement('code'); c.textContent = part.slice(1, -1); d.append(c); } else d.append(part); });
@@ -114,6 +114,106 @@
     });
     return root;
   }
+  /* ---------- text diagrams: numbered workflows ("1. TITLE   note", indented detail, "a. sub-step", "cond   -> result") ---------- */
+  const ARROW = /\s{2,}(?:->|→)\s+/;
+  const arrows = (t) => t.replace(/\s->\s/g, ' → ');
+  function parseSteps(text) {
+    if (/[│┌┐└┘▼›]/.test(text)) return null;
+    const lines = text.replace(/\s+$/, '').split('\n').filter((l) => l.trim());
+    const first = lines[0] && lines[0].match(/^(\s*)(\d+)[.)]\s+/);
+    if (!first) return null;
+    const base = first[1].length, steps = []; let expect = +first[2];
+    for (const l of lines) {
+      const ind = l.match(/^\s*/)[0].length, m = l.match(/^(\s*)(\d+)[.)]\s+(\S.*)$/);
+      if (m && ind === base) {
+        if (+m[2] !== expect++) return null;
+        const mm = m[3].match(/^(.*?\S)(?:\s{2,}(\S.*))?$/);
+        const st = { n: m[2], title: mm[1], rest: mm[2] || '', tag: '', textCol: base + m[2].length + 2, items: [] };
+        const tg = st.rest.match(/^([\w.\/@<>\-\[\]*{}]+)(?:\s{2,}(\S.*))?$/);     // "kernel/http/csrf.ts" (+ optional note)
+        if (tg) { st.tag = tg[1]; st.rest = tg[2] || ''; }
+        steps.push(st);
+        continue;
+      }
+      if (ind <= base || !steps.length) return null;
+      const st = steps.at(-1), t = l.trim(), last = st.items.at(-1);
+      let m2;
+      if ((m2 = t.match(/^([a-z])[.)]\s+(.*)$/))) { st.items.push({ kind: 'sub', mark: m2[1], text: m2[2], ind, cont: [] }); continue; }
+      if (!st.rest && !st.tag && !last && !/[.:?!)]$/.test(st.title)) { st.title += ' ' + t; continue; }   // a sentence-title wrapped onto the next line
+      if (ARROW.test(t)) { const [c, r] = t.split(ARROW); st.items.push({ kind: 'row', text: c, res: r, ind, cont: [] }); continue; }
+      if (last && last.kind !== 'para' && ind > last.ind) { const c = last.cont; if (c.length && !/[.:?!)]$/.test(c.at(-1))) c[c.length - 1] += ' ' + t; else c.push(t); continue; }                 // detail under a sub-step or row
+      if (last && last.kind === 'para' && (ind > last.ind || !/[:.]$/.test(last.text))) { last.text += ' ' + t; continue; }
+      if (!last && st.rest && !/:$/.test(st.rest) && ind >= st.textCol) { st.rest += ' ' + t; continue; }
+      st.items.push({ kind: 'para', text: t, ind });
+    }
+    for (const st of steps) {                                   // "sub-step" lines with their own arrow: "public  -> let it through."
+      st.items.forEach((it) => { if (it.kind === 'sub') { const p = it.text.split(ARROW); if (p.length === 2) { it.text = p[0]; it.res = p[1]; } } });
+    }
+    return steps.length >= 2 ? steps : null;
+  }
+  const addText = (el, text) => {                               // text with `code` spans
+    arrows(text).split(/(`[^`]+`)/).forEach((part) => { if (/^`[^`]+`$/.test(part)) { const c = document.createElement('code'); c.textContent = part.slice(1, -1); el.append(c); } else el.append(part); });
+    return el;
+  };
+  const div = (cls, text) => { const d = document.createElement('div'); d.className = cls; if (text != null) addText(d, text); return d; };
+  function buildSteps(steps) {
+    const root = div('flow-steps');
+    steps.forEach((st) => {
+      const row = div('flow-step'), num = div('flow-num', st.n), card = div('flow-card');
+      const head = div('flow-head'), title = div('flow-title' + (st.title.length > 46 ? ' long' : ''), st.title); head.append(title);
+      if (st.tag) { const tag = div('flow-tag'); tag.textContent = st.tag; head.append(tag); }
+      card.append(head);
+      if (st.rest) card.append(div('flow-desc', st.rest));
+      st.items.forEach((it) => {
+        if (it.kind === 'para') card.append(div('flow-desc', it.text));
+        else if (it.kind === 'sub' || it.kind === 'row') {
+          const r = div('flow-item' + (it.kind === 'row' ? ' is-row' : '')); if (it.mark) r.append(div('flow-mark', it.mark));
+          r.append(div('flow-text', it.text));
+          if (it.res) { const res = div('flow-res'); res.append('→ '); addText(res, it.res); r.append(res); }
+          (it.cont || []).forEach((c) => r.append(div('flow-more', c)));
+          card.append(r);
+        }
+      });
+      row.append(num, card); root.append(row);
+    });
+    return root;
+  }
+
+  /* ---------- text diagrams: "Key:   value" forms ---------- */
+  function parseKV(text) {
+    if (/[│┌┐└┘▼]/.test(text)) return null;
+    const lines = text.replace(/\s+$/, '').split('\n').filter((l) => l.trim());
+    const rows = [];
+    for (const l of lines) {
+      const m = l.match(/^([A-Za-z][A-Za-z0-9 _\/-]{0,28}):\s+(\S.*)$/);
+      if (m) rows.push({ k: m[1], v: m[2], col: l.length - m[2].length });
+      else if (rows.length && l.match(/^\s*/)[0].length > 2) rows.at(-1).v += ' ' + l.trim();
+      else return null;
+    }
+    const freq = {}; rows.forEach((r) => { freq[r.col] = (freq[r.col] || 0) + 1; });
+    const top = Math.max(...Object.values(freq));
+    return rows.length >= 3 && top >= 3 && top >= rows.length * 0.6 ? rows : null;
+  }
+  function buildKV(rows) {
+    const root = div('kv-card');
+    rows.forEach((r) => { const row = div('kv-row'); row.append(div('kv-key', r.k), div('kv-val', r.v)); root.append(row); });
+    return root;
+  }
+
+  /* ---------- text diagrams: folder trees drawn with ├── └── │ ---------- */
+  function parseBoxTree(text) {
+    if (!/[├└]── /.test(text) || /[┌┐┘┬┴┼▼▲]/.test(text)) return null;      // real tree branches only; box drawings stay diagrams
+    const rows = [], all = text.replace(/\s+$/, '').split('\n').filter((l) => l.trim());
+    if (all.filter((l) => /^[│├└─\s]*[├└│]/.test(l)).length < all.length * 0.6) return null;
+    for (const l of text.replace(/\s+$/, '').split('\n')) {
+      if (!l.trim()) continue;
+      const m = l.match(/^([│├└─\s]*)(\S.*)$/); if (!m) return null;
+      const depth = Math.floor(m[1].length / 4), mm = m[2].match(/^(.*?\S)(?:\s{2,}(\S.*))?$/);
+      if (/^[│├└─]+$/.test(mm[1])) continue;
+      rows.push({ depth, name: mm[1], desc: mm[2] || '' });
+    }
+    return rows.length >= 4 && rows.length <= 160 ? rows : null;
+  }
+
   // Box-drawing diagrams keep their alignment: use the page margins, then shrink the font to fit (not below 11px); "Expand" shows them large.
   function fitAsciiArt(pre) {
     const code = pre.querySelector('code'); if (!code) return;
@@ -203,8 +303,11 @@
       }
       if (!lang || /^(text|txt|ascii|plain|plaintext|diagram)$/.test(lang)) {
         const stack = parseLayerStack(code.textContent);
-        const tree = !stack && !/[│┌┐└┘├┤═║╔╗╚╝▼▲]/.test(code.textContent) && parseTree(code.textContent);
-        const built = stack ? buildLayerStack(stack) : tree ? buildTree(tree) : null;
+        const txt = code.textContent;
+        const steps = !stack && parseSteps(txt), btree = !stack && !steps && parseBoxTree(txt);
+        const tree = !stack && !steps && !btree && !/[│┌┐└┘├┤═║╔╗╚╝▼▲]/.test(txt) && parseTree(txt);
+        const kv = !stack && !steps && !btree && !tree && parseKV(txt);
+        const built = stack ? buildLayerStack(stack) : steps ? buildSteps(steps) : btree ? buildTree(btree) : tree ? buildTree(tree) : kv ? buildKV(kv) : null;
         if (built) { if (pre.dataset.line) { built.dataset.line = pre.dataset.line; built.dataset.lineEnd = pre.dataset.lineEnd; } pre.replaceWith(built); return; }
         if (/[│┌┐└┘├┤─═║╔╗╚╝▼▲►◄→]/.test(code.textContent)) {
           pre.classList.add('ascii-art'); fitAsciiArt.queue.push(pre);
@@ -213,6 +316,14 @@
         }
       }
       if (window.hljs && lang && hljs.getLanguage(lang)) hljs.highlightElement(code); else code.classList.add('hljs');
+      if (!pre.classList.contains('ascii-art')) {
+        const wrapDefault = !lang || /^(text|txt|plain|plaintext|markdown|md|bash|sh|shell|zsh|console|terminal|log|diff)$/i.test(lang);
+        const w = document.createElement('button'); w.type = 'button'; w.className = 'wrapbtn';
+        const sync = () => { w.textContent = pre.classList.contains('wrap') ? 'Scroll' : 'Wrap'; w.title = pre.classList.contains('wrap') ? 'Scroll sideways instead' : 'Wrap long lines'; };
+        pre.classList.toggle('wrap', wrapDefault); sync();
+        w.onclick = () => { pre.classList.toggle('wrap'); sync(); };
+        pre.append(w);
+      }
       const b = document.createElement('button');
       b.className = 'copy'; b.textContent = 'Copy';
       b.onclick = () => navigator.clipboard?.writeText(code.textContent).then(() => { b.textContent = 'Copied'; setTimeout(() => (b.textContent = 'Copy'), 1200); });
@@ -223,6 +334,7 @@
     // Tables wider than the text column may use the page margins (see .table-wrap.wide in viewer.css).
     requestAnimationFrame(() => root.querySelectorAll('.table-wrap').forEach((w) => {
       if (w.firstElementChild.scrollWidth > w.clientWidth + 2) w.classList.add('wide');
+      if (w.firstElementChild.scrollWidth > w.clientWidth + 2) w.classList.add('fit');       // still too wide: let the cells wrap instead of scrolling
     }));
     root.querySelectorAll('blockquote').forEach((bq) => {
       const p = bq.firstElementChild;

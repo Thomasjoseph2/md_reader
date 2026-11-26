@@ -638,7 +638,7 @@ body.can-create .new-only { display: inline-block; }
 
 /* folder-map text diagrams */
 .md .tree-card { margin: 1.4em 0; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-soft); padding: 8px 6px; }
-.md .tree-row { display: grid; grid-template-columns: minmax(7.5em, max-content) minmax(0, 1fr); gap: 4px 18px; padding: 7px 14px 7px calc(14px + var(--d, 0) * 22px); border-radius: 8px; }
+.md .tree-row { display: grid; grid-template-columns: minmax(8em, calc(19em - var(--d, 0) * 22px)) minmax(0, 1fr); gap: 4px 18px; padding: 7px 14px 7px calc(14px + var(--d, 0) * 22px); border-radius: 8px; }
 .md .tree-row:nth-child(2n) { background: color-mix(in srgb, var(--bg) 60%, transparent); }
 .md .tree-name { font: 600 14px var(--font-mono); color: var(--text); }
 .md .tree-name.dir { color: var(--note); }
@@ -657,3 +657,44 @@ body.can-create .new-only { display: inline-block; }
 .upd-bar .btn { padding: 5px 12px; }
 .mm-stage > pre.mm-pre code.hljs { background: transparent; }
 @media print { .upd-bar { display: none !important; } }
+
+/* ---------- numbered workflows ---------- */
+.md .flow-steps { margin: 1.5em 0; }
+.md .flow-step { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 0 14px; position: relative; padding-bottom: 14px; }
+.md .flow-step:not(:last-child)::before { content: ""; position: absolute; left: 16px; top: 34px; bottom: -2px; width: 2px; background: var(--border-strong); border-radius: 2px; }
+.md .flow-num { width: 34px; height: 34px; border-radius: 50%; background: var(--accent); color: var(--on-accent); display: flex; align-items: center; justify-content: center; font: 600 15px var(--font-ui); z-index: 1; }
+.md .flow-card { border: 1px solid var(--border); border-radius: 12px; background: var(--bg-soft); padding: 11px 16px 12px; min-width: 0; }
+.md .flow-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
+.md .flow-title { font: 600 15.5px var(--font-ui); color: var(--heading); overflow-wrap: anywhere; }
+.md .flow-tag { font: 500 12.5px var(--font-mono); color: var(--note); background: var(--accent-soft); border-radius: 6px; padding: 2px 8px; overflow-wrap: anywhere; }
+.md .flow-desc { margin-top: 6px; font-size: 14.5px; line-height: 1.6; color: var(--text); overflow-wrap: anywhere; }
+.md .flow-item { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin-top: 8px; padding: 8px 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 9px; font-size: 14px; line-height: 1.55; }
+.md .flow-mark { flex: none; width: 20px; height: 20px; border-radius: 6px; background: var(--accent-soft); color: var(--note); font: 600 12px var(--font-mono); display: flex; align-items: center; justify-content: center; }
+.md .flow-text { flex: 1 1 18em; min-width: 0; overflow-wrap: anywhere; }
+.md .flow-res { flex: 0 1 auto; color: var(--tip); font-weight: 500; overflow-wrap: anywhere; max-width: 100%; }
+.md .flow-item.is-row .flow-text { color: var(--muted); }
+.md .flow-desc code, .md .flow-item code, .md .flow-title code { font-size: .88em; padding: .08em .35em; background: var(--bg-soft); border: 1px solid var(--border); border-radius: 5px; }
+/* forms */
+.md .kv-card { margin: 1.4em 0; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: var(--bg-soft); }
+.md .kv-row { display: grid; grid-template-columns: minmax(7em, 12em) minmax(0, 1fr); border-top: 1px solid var(--border); }
+.md .kv-row:first-child { border-top: 0; }
+.md .kv-key { padding: 8px 14px; font-weight: 600; color: var(--heading); background: color-mix(in srgb, var(--bg-soft) 70%, var(--border)); font-size: 14px; }
+.md .kv-val { padding: 8px 14px; font-size: 14.5px; line-height: 1.55; overflow-wrap: anywhere; }
+@media (max-width: 640px) { .md .kv-row { grid-template-columns: 1fr; } .md .flow-step { grid-template-columns: 28px minmax(0, 1fr); gap: 0 10px; } .md .flow-num { width: 28px; height: 28px; font-size: 13px; } .md .flow-step:not(:last-child)::before { left: 13px; top: 28px; } }
+/* code: wrap toggle, tables, long words */
+.md pre.wrap code, .md pre.wrap { white-space: pre-wrap; overflow-wrap: anywhere; word-break: normal; }
+.md pre.wrap { overflow-x: hidden; }
+.md pre .wrapbtn { position: absolute; top: 8px; right: 64px; opacity: 0; font-size: 12px; padding: 3px 9px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--muted); cursor: pointer; }
+.md pre:hover .wrapbtn, .md pre .wrapbtn:focus-visible { opacity: 1; }
+@media (hover: none) { .md pre .wrapbtn { opacity: 1; } }
+.md .table-wrap.fit table { width: 100%; max-width: 100%; table-layout: auto; }
+.md :not(pre) > code, .md td, .md th { overflow-wrap: anywhere; }
+.md .frontmatter pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+.md .tree-row { word-break: normal; }
+
+.md .flow-title.long { font-weight: 500; font-size: 15px; }
+.md .flow-more { flex: 1 1 100%; margin-left: 30px; font-size: 13.5px; color: var(--muted); line-height: 1.5; overflow-wrap: anywhere; }
+.md .flow-item:not(:has(.flow-mark)) .flow-more { margin-left: 0; }
+
+.md .tree-row.solo { grid-template-columns: minmax(0, 1fr); }
+.md .tree-row.solo .tree-name { font: 500 14.5px var(--font-ui); color: var(--text); }
