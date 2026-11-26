@@ -85,13 +85,46 @@
     });
     return root;
   }
-  // Box-drawing diagrams keep their alignment, so shrink the font to fit the column instead of scrolling.
+  /* ---------- text diagrams: indented "name/   description" lists (folder maps) ---------- */
+  function parseTree(text) {
+    const lines = text.replace(/\s+$/, '').split('\n').filter((l) => l.trim());
+    const rows = lines.map((l) => { const m = l.match(/^(\s*)([\w.@\-\/\[\]*]+)(?:\s{2,}(\S.*))?$/); return { l, indent: l.match(/^\s*/)[0].length, name: m && m[2], desc: m && m[3], descAt: m && m[3] ? l.length - m[3].length : -1 }; });
+    const cols = rows.filter((r) => r.descAt > 0).map((r) => r.descAt);
+    if (cols.length < 3 || lines.length > 40) return null;
+    const freq = {}; cols.forEach((c) => { freq[c] = (freq[c] || 0) + 1; });
+    const [col, n] = Object.entries(freq).sort((a, b) => b[1] - a[1])[0];
+    if (n < 3 || n < cols.length * 0.7) return null;
+    const out = [];
+    for (const r of rows) {
+      if (r.indent >= +col) { if (!out.length) return null; out.at(-1).desc = (out.at(-1).desc ? out.at(-1).desc + ' ' : '') + r.l.trim(); continue; }
+      if (!r.name) return null;
+      if (r.descAt > 0 && r.descAt !== +col) { const o = out.at(-1); if (r.descAt > +col) { if (!o) return null; o.desc += ' ' + r.l.trim(); continue; } }
+      out.push({ depth: Math.round(r.indent / 2), name: r.name, desc: r.desc || '' });
+    }
+    return out.length >= 3 ? out : null;
+  }
+  function buildTree(rows) {
+    const root = document.createElement('div'); root.className = 'tree-card';
+    rows.forEach((r) => {
+      const row = document.createElement('div'); row.className = 'tree-row'; row.style.setProperty('--d', r.depth);
+      const n = document.createElement('div'); n.className = 'tree-name' + (r.name.endsWith('/') ? ' dir' : ''); n.textContent = r.name;
+      const d = document.createElement('div'); d.className = 'tree-desc';
+      (r.desc || '').split(/(`[^`]+`)/).forEach((part) => { if (/^`[^`]+`$/.test(part)) { const c = document.createElement('code'); c.textContent = part.slice(1, -1); d.append(c); } else d.append(part); });
+      row.append(n, d); root.append(row);
+    });
+    return root;
+  }
+  // Box-drawing diagrams keep their alignment: use the page margins, then shrink the font to fit (not below 11px); "Expand" shows them large.
   function fitAsciiArt(pre) {
     const code = pre.querySelector('code'); if (!code) return;
-    code.style.fontSize = ''; const avail = pre.clientWidth - 36;
-    if (!avail || code.scrollWidth <= avail) return;
+    code.style.fontSize = ''; pre.style.marginInline = '';
+    const wrap = pre.closest('.doc-wrap');
+    const ext = wrap ? Math.max(0, Math.min(parseFloat(getComputedStyle(wrap).paddingLeft), parseFloat(getComputedStyle(wrap).paddingRight)) - 14) : 0;
+    const need = () => code.scrollWidth, room = () => code.clientWidth;      // <code> is the scrolling box (highlight.js makes it display:block)
+    if (ext && need() > room()) pre.style.marginInline = `-${Math.min(ext, Math.ceil((need() - room()) / 2) + 2)}px`;
+    if (!room() || need() <= room()) return;
     const base = parseFloat(getComputedStyle(code).fontSize);
-    code.style.fontSize = Math.max(9, base * avail / code.scrollWidth).toFixed(2) + 'px';
+    code.style.fontSize = Math.max(11, base * room() / need()).toFixed(2) + 'px';
   }
   fitAsciiArt.queue = [];
   addEventListener('resize', () => document.querySelectorAll('pre.ascii-art').forEach(fitAsciiArt));
@@ -170,8 +203,14 @@
       }
       if (!lang || /^(text|txt|ascii|plain|plaintext|diagram)$/.test(lang)) {
         const stack = parseLayerStack(code.textContent);
-        if (stack) { const d = buildLayerStack(stack); if (pre.dataset.line) { d.dataset.line = pre.dataset.line; d.dataset.lineEnd = pre.dataset.lineEnd; } pre.replaceWith(d); return; }
-        if (/[│┌┐└┘├┤─═║╔╗╚╝▼▲►◄→]/.test(code.textContent)) { pre.classList.add('ascii-art'); fitAsciiArt.queue.push(pre); }
+        const tree = !stack && !/[│┌┐└┘├┤═║╔╗╚╝▼▲]/.test(code.textContent) && parseTree(code.textContent);
+        const built = stack ? buildLayerStack(stack) : tree ? buildTree(tree) : null;
+        if (built) { if (pre.dataset.line) { built.dataset.line = pre.dataset.line; built.dataset.lineEnd = pre.dataset.lineEnd; } pre.replaceWith(built); return; }
+        if (/[│┌┐└┘├┤─═║╔╗╚╝▼▲►◄→]/.test(code.textContent)) {
+          pre.classList.add('ascii-art'); fitAsciiArt.queue.push(pre);
+          const x = document.createElement('button'); x.type = 'button'; x.className = 'mm-expand'; x.textContent = '⤢ Expand'; x.title = 'Open large, with zoom';
+          x.onclick = () => openDiagram(pre); pre.append(x);
+        }
       }
       if (window.hljs && lang && hljs.getLanguage(lang)) hljs.highlightElement(code); else code.classList.add('hljs');
       const b = document.createElement('button');
@@ -265,14 +304,16 @@
   function openDiagram(svg) {
     const ov = document.createElement('div'); ov.className = 'mm-overlay';
     const stage = document.createElement('div'); stage.className = 'mm-stage';
-    const clone = svg.cloneNode(true); clone.removeAttribute('style'); clone.removeAttribute('loading'); if (clone.tagName !== 'IMG') { clone.removeAttribute('width'); clone.removeAttribute('height'); } clone.draggable = false; clone.style.cursor = 'grab';
+    const isPre = svg.tagName === 'PRE';
+    const clone = svg.cloneNode(true); clone.removeAttribute('style'); clone.removeAttribute('loading');
+    if (isPre) { clone.querySelectorAll('button').forEach((b) => b.remove()); clone.classList.remove('ascii-art'); clone.classList.add('mm-pre'); const c = clone.querySelector('code'); if (c) c.style.fontSize = ''; } if (clone.tagName !== 'IMG') { clone.removeAttribute('width'); clone.removeAttribute('height'); } clone.draggable = false; clone.style.cursor = 'grab';
     stage.append(clone);
     const bar = document.createElement('div'); bar.className = 'mm-bar';
     bar.innerHTML = '<button data-a="out" title="Zoom out">−</button><button data-a="fit" title="Fit">Fit</button><button data-a="in" title="Zoom in">+</button><button data-a="x" title="Close (Esc)">✕</button>';
     ov.append(stage, bar); document.body.append(ov);
     let k = 1, x = 0, y = 0;
     const apply = () => { clone.style.transform = `translate(${x}px,${y}px) scale(${k})`; };
-    const fit = () => { k = 1; x = 0; y = 0; apply(); };
+    const fit = () => { k = 1; x = 0; y = 0; if (isPre) k = Math.min(1.8, (stage.clientWidth - 80) / clone.offsetWidth, (stage.clientHeight - 80) / clone.offsetHeight); apply(); };
     const zoom = (f) => { k = Math.min(8, Math.max(.3, k * f)); apply(); };
     const close = () => { ov.remove(); removeEventListener('keydown', onKey); };
     const onKey = (e) => { if (e.key === 'Escape') close(); };
@@ -284,7 +325,7 @@
     clone.onpointerdown = (e) => { drag = { px: e.clientX - x, py: e.clientY - y }; clone.setPointerCapture(e.pointerId); clone.style.cursor = 'grabbing'; };
     clone.onpointermove = (e) => { if (drag) { x = e.clientX - drag.px; y = e.clientY - drag.py; apply(); } };
     clone.onpointerup = () => { drag = null; clone.style.cursor = 'grab'; };
-    apply();
+    fit();
   }
   async function renderMermaid(root) {
     const nodes = [...root.querySelectorAll('.mermaid')];

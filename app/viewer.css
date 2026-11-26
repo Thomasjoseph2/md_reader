@@ -635,3 +635,25 @@ body.can-create .new-only { display: inline-block; }
 
 .tree-tools { flex-wrap: wrap; row-gap: 2px; }
 .tree-tools button { white-space: nowrap; }
+
+/* folder-map text diagrams */
+.md .tree-card { margin: 1.4em 0; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-soft); padding: 8px 6px; }
+.md .tree-row { display: grid; grid-template-columns: minmax(7.5em, max-content) minmax(0, 1fr); gap: 4px 18px; padding: 7px 14px 7px calc(14px + var(--d, 0) * 22px); border-radius: 8px; }
+.md .tree-row:nth-child(2n) { background: color-mix(in srgb, var(--bg) 60%, transparent); }
+.md .tree-name { font: 600 14px var(--font-mono); color: var(--text); }
+.md .tree-name.dir { color: var(--note); }
+.md .tree-desc { font-size: 14.5px; line-height: 1.55; color: var(--text); }
+.md .tree-desc code { font-size: .88em; padding: .08em .35em; background: var(--bg); border: 1px solid var(--border); border-radius: 5px; }
+@media (max-width: 640px) { .md .tree-row { grid-template-columns: 1fr; } }
+.md pre.ascii-art { overflow-x: auto; }
+.md pre .mm-expand { position: absolute; top: 8px; right: 64px; opacity: 0; }
+.md pre:hover .mm-expand, .md pre .mm-expand:focus-visible { opacity: 1; }
+@media (hover: none) { .md pre .mm-expand { opacity: 1; } }
+.mm-stage > pre.mm-pre { margin: 0; width: max-content; max-width: none; overflow: visible; transform-origin: center; touch-action: none; user-select: none; cursor: grab; padding: 22px 26px; background: var(--code-bg); border: 1px solid var(--border); border-radius: 12px; }
+.mm-stage > pre.mm-pre code { font-size: 14px; }
+
+.upd-bar { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); z-index: 250; display: flex; align-items: center; gap: 10px; padding: 10px 12px 10px 18px;
+  background: var(--heading); color: var(--bg); border-radius: 12px; box-shadow: 0 8px 28px rgba(0,0,0,.25); font-size: 14px; max-width: calc(100vw - 24px); }
+.upd-bar .btn { padding: 5px 12px; }
+.mm-stage > pre.mm-pre code.hljs { background: transparent; }
+@media print { .upd-bar { display: none !important; } }

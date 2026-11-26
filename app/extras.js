@@ -19,6 +19,24 @@
     load(items, items.length === 1 ? items[0].path : 'Opened files');
   });
 
+  /* ---------- "new version ready" bar: compares the file versions in this page with the live page ---------- */
+  const verOf = (list) => [...list].sort().join('|');
+  const mineVer = verOf([...document.querySelectorAll('[src*="?v="],[href*="?v="]')].map((e) => e.getAttribute('src') || e.getAttribute('href')));
+  async function checkUpdate() {
+    if (!onWeb || $('#updBar')) return;
+    try {
+      const html = await (await fetch('/', { cache: 'no-store' })).text();
+      if (verOf([...html.matchAll(/(?:src|href)="([^"]*\?v=[^"]*)"/g)].map((m) => m[1])) === mineVer) return;
+      const bar = Object.assign(document.createElement('div'), { id: 'updBar', className: 'upd-bar', innerHTML: '<span>A new version is ready.</span><button class="btn primary">Reload</button><button class="btn" aria-label="Dismiss">✕</button>' });
+      const [go, no] = bar.querySelectorAll('button');
+      go.onclick = () => { if (document.body.classList.contains('editing')) { toast('Save or cancel your edit first, then reload.'); return; } location.reload(); };
+      no.onclick = () => bar.remove();
+      document.body.append(bar);
+    } catch (e) { /* offline or blocked: try again later */ }
+  }
+  window.mdvCheckUpdate = checkUpdate;
+  if (onWeb) { setTimeout(checkUpdate, 8000); setInterval(checkUpdate, 30 * 60 * 1000); document.addEventListener('visibilitychange', () => { if (!document.hidden) checkUpdate(); }); }
+
   /* ---------- reading options: width and text size ---------- */
   const prefs = { w: 'normal', s: 0, ...JSON.parse((() => { try { return localStorage.getItem('mdv-read') || '{}'; } catch { return '{}'; } })()) };
   const WIDTH = { narrow: '700px', normal: '860px', wide: '1120px' };
@@ -148,6 +166,6 @@
   $('#openFilesItem').after(item); item.onclick = () => openNotes();
   if (!onWeb) { startBtn.remove(); item.remove(); }
   readWs().then((ws) => { if (ws) startBtn.textContent = 'Open my notes'; });
-  setInterval(() => { persist(); syncUi(); }, 1200);
+  setInterval(syncUi, 250); setInterval(persist, 1200);
   addEventListener('pagehide', persist);
 })();
