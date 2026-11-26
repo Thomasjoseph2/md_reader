@@ -28,3 +28,8 @@ Reading files does not collect, store, send or sell any personal data. Sharing a
 - To have your account and every link removed, open an issue below.
 
 Questions: open an issue at https://github.com/Thomasjoseph2/md_reader/issues
+
+
+## Local notes
+
+Files and folders you create with **Write notes** are stored only in your browser (IndexedDB) on your device. They are not uploaded to our servers. Signing in is required to create them, but the sign-in only identifies you; your notes are never sent with it. Clearing your browser's site data deletes them, so download a `.md` or `.zip` copy to keep a backup. They are uploaded only if you press Share.

@@ -107,6 +107,7 @@
       timer = setInterval(check, 2000);
     });
   }
+  window.mdvAuth = { signIn, whoAmI, get user() { return me; } };
   async function signOut() { await api('auth/logout', {}); me = null; updateProfile(); toast('Signed out'); }
 
   function renderProfileMenu() {

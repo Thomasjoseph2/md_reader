@@ -140,7 +140,7 @@ async function load(items, root, keepPlace = false) {
   el.rootName.textContent = root;
   el.reloadBtn.classList.toggle('hidden', !state.dirHandle);
   document.body.classList.add('loaded');
-  document.body.classList.toggle('one-file', state.texts.size === 1);
+  document.body.classList.toggle('one-file', state.texts.size === 1 && root !== 'My notes (local)');   // local notes always show the list (it holds + File)
   buildTree();
   el.toast.classList.add('hidden');
   if (el.search.value.trim()) runSearch();

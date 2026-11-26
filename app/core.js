@@ -20,13 +20,18 @@
       : { bg: '#FDFBF7', box: '#F4F1EA', border: '#CFC6B6', text: '#1A1C20', line: '#6B6760', alt: '#E3EFF7', note: '#FBF0CC' };
     mermaid.initialize({
       startOnLoad: false, securityLevel: 'strict', theme: 'base',
+      flowchart: { curve: 'basis', padding: 16, nodeSpacing: 44, rankSpacing: 54, htmlLabels: true, useMaxWidth: true },
+      sequence: { useMaxWidth: true, actorMargin: 60, messageMargin: 38, boxMargin: 10, mirrorActors: false },
+      er: { useMaxWidth: true }, state: { useMaxWidth: true }, class: { useMaxWidth: true },
+      gantt: { useMaxWidth: true }, journey: { useMaxWidth: true }, timeline: { useMaxWidth: true },
       fontFamily: '"IBM Plex Sans", system-ui, sans-serif',
       themeVariables: {
         darkMode: dark, background: c.bg, fontSize: '15px', fontFamily: '"IBM Plex Sans", system-ui, sans-serif',
-        primaryColor: c.box, primaryBorderColor: c.border, primaryTextColor: c.text,
-        secondaryColor: c.alt, secondaryBorderColor: c.border, secondaryTextColor: c.text,
-        tertiaryColor: c.bg, tertiaryBorderColor: c.border, tertiaryTextColor: c.text,
-        lineColor: c.line, textColor: c.text, mainBkg: c.box, nodeBorder: c.border, clusterBkg: c.bg, clusterBorder: c.border,
+        primaryColor: dark ? '#1B3556' : '#DCEBF7', primaryBorderColor: dark ? '#60A5FA' : '#0277BD', primaryTextColor: c.text,
+        secondaryColor: dark ? '#1F3B33' : '#E1F1E3', secondaryBorderColor: dark ? '#34D399' : '#2E7D32', secondaryTextColor: c.text,
+        tertiaryColor: dark ? '#2C2547' : '#ECE6F7', tertiaryBorderColor: c.border, tertiaryTextColor: c.text,
+        lineColor: c.line, textColor: c.text, mainBkg: dark ? '#1B3556' : '#DCEBF7', nodeBorder: dark ? '#60A5FA' : '#0277BD', clusterBkg: dark ? '#161D2D' : '#F7F4EC', clusterBorder: c.border,
+        cScale0: dark ? '#60A5FA' : '#0277BD', cScale1: dark ? '#34D399' : '#2E7D32', cScale2: dark ? '#A78BFA' : '#6A4BA8', cScale3: dark ? '#E3B341' : '#9A6700',
         edgeLabelBackground: c.bg, noteBkgColor: c.note, noteBorderColor: c.border, noteTextColor: c.text,
         actorBkg: c.box, actorBorder: c.border, actorTextColor: c.text, signalColor: c.line, signalTextColor: c.text,
         labelBoxBkgColor: c.box, labelBoxBorderColor: c.border, labelTextColor: c.text,
@@ -46,6 +51,50 @@
     if (persist) try { localStorage.setItem('mdv-theme', t); } catch {}
     applyTheme();
   }
+
+  /* ---------- text diagrams: layer stacks ("name   description", │ continuation lines, ▼ between) ---------- */
+  function parseLayerStack(text) {
+    const lines = text.replace(/\s+$/, '').split('\n');
+    const blocks = []; let cur = null, arrows = 0;
+    for (const raw of lines) {
+      if (!raw.trim()) continue;
+      if (/^\s*[▼↓⬇v]\s*$/.test(raw)) { arrows++; cur = null; continue; }
+      if (/^\S/.test(raw)) {
+        const m = raw.match(/^(\S.*?)(?:\s{2,}(.*))?$/);
+        cur = { title: m[1], lines: m[2] ? [m[2]] : [] }; blocks.push(cur); continue;
+      }
+      const c = raw.replace(/^\s*[│|]?\s*/, '');
+      if (!cur || !c) { if (!cur) return null; continue; }
+      cur.lines.push(c);
+    }
+    return blocks.length >= 3 && arrows >= blocks.length - 2 && blocks.every((b) => b.lines.length <= 6) ? blocks : null;
+  }
+  function buildLayerStack(blocks) {
+    const root = document.createElement('div'); root.className = 'layer-stack';
+    blocks.forEach((b, i) => {
+      if (i) { const a = document.createElement('div'); a.className = 'layer-arrow'; a.innerHTML = '<svg viewBox="0 0 24 28" width="22" height="26" aria-hidden="true"><path d="M12 1v20M5 15l7 8 7-8" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>'; root.append(a); }
+      const card = document.createElement('div'); card.className = 'layer layer-' + (i % 4);
+      const t = document.createElement('div'); t.className = 'layer-title'; t.textContent = b.title;
+      const d = document.createElement('div'); d.className = 'layer-desc';
+      b.lines.forEach((l) => {
+        const p = document.createElement('div');
+        l.split(/(`[^`]+`)/).forEach((part) => { if (/^`[^`]+`$/.test(part)) { const c = document.createElement('code'); c.textContent = part.slice(1, -1); p.append(c); } else p.append(part); });
+        d.append(p);
+      });
+      card.append(t, d); root.append(card);
+    });
+    return root;
+  }
+  // Box-drawing diagrams keep their alignment, so shrink the font to fit the column instead of scrolling.
+  function fitAsciiArt(pre) {
+    const code = pre.querySelector('code'); if (!code) return;
+    code.style.fontSize = ''; const avail = pre.clientWidth - 36;
+    if (!avail || code.scrollWidth <= avail) return;
+    const base = parseFloat(getComputedStyle(code).fontSize);
+    code.style.fontSize = Math.max(9, base * avail / code.scrollWidth).toFixed(2) + 'px';
+  }
+  fitAsciiArt.queue = [];
+  addEventListener('resize', () => document.querySelectorAll('pre.ascii-art').forEach(fitAsciiArt));
 
   /* ---------- Markdown → HTML ---------- */
   // Obsidian-style [[Note]], [[Note|label]], [[Note#Heading]], ![[image.png]]. Code is left alone.
@@ -119,12 +168,18 @@
         pre.replaceWith(d);
         return;
       }
+      if (!lang || /^(text|txt|ascii|plain|plaintext|diagram)$/.test(lang)) {
+        const stack = parseLayerStack(code.textContent);
+        if (stack) { const d = buildLayerStack(stack); if (pre.dataset.line) { d.dataset.line = pre.dataset.line; d.dataset.lineEnd = pre.dataset.lineEnd; } pre.replaceWith(d); return; }
+        if (/[│┌┐└┘├┤─═║╔╗╚╝▼▲►◄→]/.test(code.textContent)) { pre.classList.add('ascii-art'); fitAsciiArt.queue.push(pre); }
+      }
       if (window.hljs && lang && hljs.getLanguage(lang)) hljs.highlightElement(code); else code.classList.add('hljs');
       const b = document.createElement('button');
       b.className = 'copy'; b.textContent = 'Copy';
       b.onclick = () => navigator.clipboard?.writeText(code.textContent).then(() => { b.textContent = 'Copied'; setTimeout(() => (b.textContent = 'Copy'), 1200); });
       pre.append(b);
     });
+    requestAnimationFrame(() => { fitAsciiArt.queue.splice(0).forEach(fitAsciiArt); });
     root.querySelectorAll('table').forEach((t) => { const w = document.createElement('div'); w.className = 'table-wrap'; t.replaceWith(w); w.append(t); });
     // Tables wider than the text column may use the page margins (see .table-wrap.wide in viewer.css).
     requestAnimationFrame(() => root.querySelectorAll('.table-wrap').forEach((w) => {
@@ -179,11 +234,63 @@
     });
     return mermaidLoading;
   }
+  function addDiagramTools(n) {
+    const svg = n.querySelector('svg');
+    if (!svg || n.querySelector('.mm-tools')) return;
+    const bar = document.createElement('div'); bar.className = 'mm-tools';
+    const btn = (label, title, fn) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'mm-expand'; b.textContent = label; b.title = title; b.onclick = (e) => { e.stopPropagation(); fn(); }; bar.append(b); };
+    btn('⤢ Expand', 'Expand diagram', () => openDiagram(svg));
+    btn('SVG', 'Download as SVG', () => saveDiagram(svg, 'svg'));
+    btn('PNG', 'Download as PNG', () => saveDiagram(svg, 'png'));
+    n.append(bar);
+    svg.style.cursor = 'zoom-in'; svg.onclick = () => openDiagram(svg);
+  }
+  function saveDiagram(svg, type) {
+    const c = svg.cloneNode(true); c.setAttribute('xmlns', 'http://www.w3.org/2000/svg'); c.removeAttribute('style');
+    const vb = (svg.getAttribute('viewBox') || '').split(/[ ,]+/).map(Number);
+    const w = vb[2] || svg.getBoundingClientRect().width, h = vb[3] || svg.getBoundingClientRect().height;
+    c.setAttribute('width', w); c.setAttribute('height', h);
+    const xml = new XMLSerializer().serializeToString(c);
+    const save = (blob, ext) => { const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: 'diagram.' + ext }); document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); };
+    if (type === 'svg') return save(new Blob([xml], { type: 'image/svg+xml' }), 'svg');
+    const img = new Image();
+    img.onload = () => {
+      const k = 2, cv = document.createElement('canvas'); cv.width = w * k; cv.height = h * k;
+      const g = cv.getContext('2d'); g.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim() || '#fff'; g.fillRect(0, 0, cv.width, cv.height); g.drawImage(img, 0, 0, cv.width, cv.height);
+      try { cv.toBlob((b) => b && save(b, 'png'), 'image/png'); } catch { if (typeof toast === 'function') toast('PNG export is blocked in this browser. Use SVG.'); }
+    };
+    img.onerror = () => { if (typeof toast === 'function') toast('Could not make a PNG. Use SVG.'); };
+    img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(xml);
+  }
+  function openDiagram(svg) {
+    const ov = document.createElement('div'); ov.className = 'mm-overlay';
+    const stage = document.createElement('div'); stage.className = 'mm-stage';
+    const clone = svg.cloneNode(true); clone.removeAttribute('style'); clone.removeAttribute('loading'); if (clone.tagName !== 'IMG') { clone.removeAttribute('width'); clone.removeAttribute('height'); } clone.draggable = false; clone.style.cursor = 'grab';
+    stage.append(clone);
+    const bar = document.createElement('div'); bar.className = 'mm-bar';
+    bar.innerHTML = '<button data-a="out" title="Zoom out">−</button><button data-a="fit" title="Fit">Fit</button><button data-a="in" title="Zoom in">+</button><button data-a="x" title="Close (Esc)">✕</button>';
+    ov.append(stage, bar); document.body.append(ov);
+    let k = 1, x = 0, y = 0;
+    const apply = () => { clone.style.transform = `translate(${x}px,${y}px) scale(${k})`; };
+    const fit = () => { k = 1; x = 0; y = 0; apply(); };
+    const zoom = (f) => { k = Math.min(8, Math.max(.3, k * f)); apply(); };
+    const close = () => { ov.remove(); removeEventListener('keydown', onKey); };
+    const onKey = (e) => { if (e.key === 'Escape') close(); };
+    addEventListener('keydown', onKey);
+    bar.onclick = (e) => { const a = e.target.dataset.a; if (a === 'in') zoom(1.25); else if (a === 'out') zoom(.8); else if (a === 'fit') fit(); else if (a === 'x') close(); };
+    ov.onclick = (e) => { if (e.target === ov || e.target === stage) close(); };
+    ov.addEventListener('wheel', (e) => { e.preventDefault(); zoom(e.deltaY < 0 ? 1.12 : .89); }, { passive: false });
+    let drag = null;
+    clone.onpointerdown = (e) => { drag = { px: e.clientX - x, py: e.clientY - y }; clone.setPointerCapture(e.pointerId); clone.style.cursor = 'grabbing'; };
+    clone.onpointermove = (e) => { if (drag) { x = e.clientX - drag.px; y = e.clientY - drag.py; apply(); } };
+    clone.onpointerup = () => { drag = null; clone.style.cursor = 'grab'; };
+    apply();
+  }
   async function renderMermaid(root) {
     const nodes = [...root.querySelectorAll('.mermaid')];
     if (!nodes.length) return;
     if (!(await loadMermaid())) { nodes.forEach((n) => n.classList.add('mermaid-error')); return; }
-    try { await mermaid.run({ nodes }); } catch (e) {
+    try { await mermaid.run({ nodes }); nodes.forEach(addDiagramTools); } catch (e) {
       nodes.forEach((n) => { if (!n.querySelector('svg')) { n.classList.add('mermaid-error'); n.textContent = n.dataset.src + '\n\n⚠ ' + (e.message || e); } });
     }
   }
@@ -259,6 +366,6 @@
 
   window.MD = {
     esc, decodeSafe, slug, isExternal, initTheme, setTheme, getTheme: () => theme,
-    toHtml, docTitle, enhance, renderMermaid, buildToc, scrollToAnchor, highlightText, imagesReady, printAsPdf,
+    openZoom: openDiagram, toHtml, docTitle, enhance, renderMermaid, buildToc, scrollToAnchor, highlightText, imagesReady, printAsPdf,
   };
 })();

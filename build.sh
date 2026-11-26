@@ -6,5 +6,5 @@ version=$(python3 -c "import json; print(json.load(open('app/manifest.json'))['v
 out="dist/markdown-folder-viewer-$version.zip"
 mkdir -p dist
 rm -f "$out"
-(cd app && zip -qr "../$out" . -x 'icons/icon.svg' -x '*.DS_Store' -x robots.txt -x sitemap.xml -x og-image.png)
+(cd app && zip -qr "../$out" . -x 'icons/icon.svg' -x '*.DS_Store' -x robots.txt -x sw.js -x app.webmanifest -x sitemap.xml -x og-image.png)
 echo "Built $out ($(du -h "$out" | cut -f1))"

@@ -42,8 +42,9 @@
     const cloud = !!window.mdvShared && document.body.classList.contains('shared-view');
     const path = state.current, real = cloud ? false : await askWrite();
     editing = { cloud, path, real, original: state.texts.get(path), draft: state.texts.get(path), stale: false, file: state.files.get(path), source: false, open: null };
-    q.banner.className = 'edit-banner ' + (real || cloud ? 'real' : 'copy');
-    q.banner.textContent = cloud ? 'You are editing the shared doc. Save updates it for everyone who opens this link.' : real
+    const local = state.root === 'My notes (local)' && !cloud;
+    q.banner.className = 'edit-banner ' + (real || cloud || local ? 'real' : 'copy');
+    q.banner.textContent = cloud ? 'You are editing the shared doc. Save updates it for everyone who opens this link.' : local ? 'You are editing your local notes. Save keeps them in this browser; nothing is uploaded.' : real
       ? `You are editing the real file on your computer: ${state.root}/${path}. Save writes to it.`
       : 'You are editing a copy in this tab. Save downloads the edited file; your original is not changed.';
     q.status.textContent = '';
@@ -216,7 +217,7 @@
         }
         const w = await handle.createWritable(); await w.write(text); await w.close();
         lastModified = (await handle.getFile()).lastModified;
-      } else {
+      } else if (state.root !== 'My notes (local)') {
         const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(new Blob([text], { type: 'text/markdown' })), download: name });
         document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
       }
@@ -254,6 +255,36 @@
     stopEdit(); state.texts.set(path, original); await render(path, '', true);
   }
 
+  /* ---------- create a new file in the opened folder (real file on disk when allowed, else in this tab / the shared doc) ---------- */
+  // Returns '' when it worked, otherwise a message for the person.
+  window.mdvCreate = async (path, text) => {
+    if (editing) return 'Save or cancel your edit first.';
+    if (state.files.has(path)) return 'A file with that name already exists.';
+    const name = baseName(path);
+    try {
+      if (window.mdvShared && document.body.classList.contains('shared-view')) {
+        const files = Object.fromEntries(state.texts); files[path] = text;
+        const msg = await push(sendable(files)); if (msg) return msg;
+        state.files.set(path, new File([text], name, { type: 'text/markdown' }));
+        await reloadAll(true); toast('Added for everyone with access.', 3500); return '';
+      }
+      let real = false, lastModified = Date.now();
+      if (await askWrite()) {
+        let dir = state.dirHandle;
+        for (const d of path.split('/').slice(0, -1)) dir = await dir.getDirectoryHandle(d, { create: true });
+        let exists = true; try { await dir.getFileHandle(name); } catch { exists = false; }
+        if (exists) return 'A file with that name already exists on your computer.';
+        const h = await dir.getFileHandle(name, { create: true });
+        const w = await h.createWritable(); await w.write(text); await w.close();
+        lastModified = (await h.getFile()).lastModified; real = true;
+      }
+      state.files.set(path, new File([text], name, { type: 'text/markdown', lastModified }));
+      await reloadAll(true);
+      toast(real ? 'Created on your computer.' : 'Added in this tab only. Edit it, then Save to download the file, or use Download for a .zip.', real ? 3000 : 5500);
+      return '';
+    } catch (err) { return 'Could not create the file: ' + (err.message || err.name); }
+  };
+
   /* ---------- rename: double-click a file in the list ---------- */
   // Returns an error message, or '' when it worked.
   async function renameFile(old, name) {
@@ -288,7 +319,7 @@
       if (wasCurrent) state.current = next;
       await reloadAll(true);
       if (wasCurrent) setHash(next);
-      toast(real ? 'Renamed on your computer. Links in other files that use the old name are not changed.' : 'Renamed in this tab only. Your original file is not changed.', 4500);
+      toast(state.root === 'My notes (local)' ? 'Renamed.' : real ? 'Renamed on your computer. Links in other files that use the old name are not changed.' : 'Renamed in this tab only. Your original file is not changed.', 4500);
       return '';
     } catch (err) { return 'Could not rename: ' + (err.message || err.name); }
   }
