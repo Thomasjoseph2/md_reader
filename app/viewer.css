@@ -688,7 +688,8 @@ body.can-create .new-only { display: inline-block; }
 .md pre:hover .wrapbtn, .md pre .wrapbtn:focus-visible { opacity: 1; }
 @media (hover: none) { .md pre .wrapbtn { opacity: 1; } }
 .md .table-wrap.fit table { width: 100%; max-width: 100%; table-layout: auto; }
-.md :not(pre) > code, .md td, .md th { overflow-wrap: anywhere; }
+.md :not(pre) > code, .md td, .md th { overflow-wrap: break-word; }          /* break-word keeps a column's minimum width = its longest word; "anywhere" squeezed columns to one letter */
+.md .table-wrap.fit td code, .md .table-wrap.fit th code { overflow-wrap: anywhere; }
 .md .frontmatter pre { white-space: pre-wrap; overflow-wrap: anywhere; }
 .md .tree-row { word-break: normal; }
 
