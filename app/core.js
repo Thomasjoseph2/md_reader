@@ -317,10 +317,10 @@
       }
       if (window.hljs && lang && hljs.getLanguage(lang)) hljs.highlightElement(code); else code.classList.add('hljs');
       if (!pre.classList.contains('ascii-art')) {
-        const wrapDefault = !lang || /^(text|txt|plain|plaintext|markdown|md|bash|sh|shell|zsh|console|terminal|log|diff)$/i.test(lang);
+        // Scroll sideways by default (keeps columns and indentation intact); the Wrap button wraps long lines when a reader prefers.
         const w = document.createElement('button'); w.type = 'button'; w.className = 'wrapbtn';
         const sync = () => { w.textContent = pre.classList.contains('wrap') ? 'Scroll' : 'Wrap'; w.title = pre.classList.contains('wrap') ? 'Scroll sideways instead' : 'Wrap long lines'; };
-        pre.classList.toggle('wrap', wrapDefault); sync();
+        sync();
         w.onclick = () => { pre.classList.toggle('wrap'); sync(); };
         pre.append(w);
       }
